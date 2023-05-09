@@ -75,7 +75,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
 
         val lastDot = maxOf(0, element.text.lastIndexOf('.'))
 
-        return arrayOf(TypeReference(element, TextRange(range.startOffset + lastDot, range.endOffset), range.startOffset))
+        return arrayOf(TypeReference(element, TextRange(range.startOffset + lastDot, range.endOffset)))
     }
 
     private fun targetMethodReferences(element: PsiElement): Array<PsiReference> {
@@ -89,7 +89,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                 if (find != null && find.groups.size == 4) {
                     val returnTypeRange = TextRange(find.groups[1]!!.range.first, find.groups[1]!!.range.last + 1)
                     if (!typeIsPrimitive(returnTypeRange.substring(element.text))) {
-                        references.add(TypeReference(element, returnTypeRange, returnTypeRange.startOffset))
+                        references.add(TypeReference(element, returnTypeRange))
                     } else {
                         primitives.add(returnTypeRange)
                     }
@@ -101,7 +101,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                         val intRange = parameter.range.withOffset(parametersRange.startOffset)
                         val range = TextRange(intRange.first, intRange.last + 1) // inclusive -> exclusive
                         if (!typeIsPrimitive(range.substring(element.text))) {
-                            references.add(TypeReference(element, range, range.startOffset))
+                            references.add(TypeReference(element, range))
                         } else {
                             primitives.add(range)
                         }
@@ -159,14 +159,14 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                 if (find != null && find.groups.size == 5) {
                     // OWNER
                     val ownerRange = TextRange(find.groups[1]!!.range.first, find.groups[1]!!.range.last + 1)
-                    val ownerReference = TypeReference(element, ownerRange, 1)
+                    val ownerReference = TypeReference(element, ownerRange)
                     references.add(ownerReference)
 
 
                     // RETURN TYPE
                     val returnTypeRange = TextRange(find.groups[2]!!.range.first, find.groups[2]!!.range.last + 1)
                     if (!typeIsPrimitive(returnTypeRange.substring(element.text))) {
-                        references.add(TypeReference(element, returnTypeRange, returnTypeRange.startOffset))
+                        references.add(TypeReference(element, returnTypeRange))
                     } else {
                         primitives.add(returnTypeRange)
                     }
@@ -179,7 +179,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                         val intRange = parameter.range.withOffset(parametersRange.startOffset)
                         val range = TextRange(intRange.first, intRange.last + 1) // inclusive -> exclusive
                         if (!typeIsPrimitive(range.substring(element.text))) {
-                            references.add(TypeReference(element, range, range.startOffset))
+                            references.add(TypeReference(element, range))
                         } else {
                             primitives.add(range)
                         }
@@ -210,12 +210,12 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
 
                 if (find != null && find.groups.size == 4) {
                     val ownerRange = TextRange(find.groups[1]!!.range.first, find.groups[1]!!.range.last + 1)
-                    val ownerReference = TypeReference(element, ownerRange, 1)
+                    val ownerReference = TypeReference(element, ownerRange)
                     references.add(ownerReference)
 
                     val typeRange = TextRange(find.groups[2]!!.range.first, find.groups[2]!!.range.last + 1)
                     if (!typeIsPrimitive(typeRange.substring(element.text))) {
-                        references.add(TypeReference(element, typeRange, typeRange.startOffset))
+                        references.add(TypeReference(element, typeRange))
                     } else {
                         primitives.add(typeRange)
                     }
@@ -233,7 +233,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
         return arrayOf()
     }
 
-    private inner class TypeReference(element: PsiElement, range: TextRange, start: Int) :
+    private inner class TypeReference(element: PsiElement, range: TextRange) :
         PsiReferenceBase.Poly<PsiElement>(element, range, false), InspectionReference {
 
         override val description: String
@@ -243,7 +243,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
         override val referenceType: ReferenceType
             get() = ReferenceType.CLASS
 
-        private val qualifiedRange = TextRange(start, range.endOffset)
+        private val qualifiedRange = range
         private val qualifiedName: String
             get() = qualifiedRange.substring(element.text)
 
