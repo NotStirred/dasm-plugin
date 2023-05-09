@@ -13,7 +13,6 @@ import io.github.notstirred.dasmplugin.DasmLanguage
 abstract class ClassReferenceProvider : PsiReferenceProvider() {
     companion object {
         val PRIMITIVES_KEY = Key<List<TextRange>>("primitives")
-        private val FIELD_REDIRECT_REGEX = "\"(\\S+)\\s*\\|\\s*(\\S+)\\s+(\\S+)\"".toRegex()
         private val METHOD_REDIRECT_REGEX = "\"((?:\\w|\\\$)+)\\s*\\|\\s*(\\S+)\\s+((?:\\w|\\\$)+)\\s*\\((.*)\\)\"".toRegex()
         private val TARGET_METHOD_REGEX = "\"\\s*(\\S+)\\s+((?:\\w|\\\$)+)\\s*\\((.*)\\)\"".toRegex()
     }
@@ -204,27 +203,39 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
         val parent = element.parent
         if (parent is JsonProperty) {
             if (parent.children[0] == element) { // is key
-                val find = FIELD_REDIRECT_REGEX.find(element.text)
                 val references = ArrayList<PsiReference>()
                 val primitives = ArrayList<TextRange>()
 
-                if (find != null && find.groups.size == 4) {
-                    val ownerRange = TextRange(find.groups[1]!!.range.first, find.groups[1]!!.range.last + 1)
-                    val ownerReference = TypeReference(element, ownerRange)
-                    references.add(ownerReference)
+                val range = ElementManipulators.getManipulator(element).getRangeInElement(element)
+                val fieldRedirectText = range.substring(element.text)
 
-                    val typeRange = TextRange(find.groups[2]!!.range.first, find.groups[2]!!.range.last + 1)
-                    if (!typeIsPrimitive(typeRange.substring(element.text))) {
-                        references.add(TypeReference(element, typeRange))
-                    } else {
-                        primitives.add(typeRange)
-                    }
+                // Owner type part
+                val ownerSeparatorRange = "\\s*\\|\\s*".toRegex().find(fieldRedirectText)?.range
+                val ownerSeparatorStartIdx = ownerSeparatorRange?.first ?: fieldRedirectText.length
+                val ownerSeparatorEndIdx = ownerSeparatorRange?.last?.plus(1) ?: fieldRedirectText.length
 
-                    val nameRange = TextRange(find.groups[3]!!.range.first, find.groups[3]!!.range.last + 1)
-                    references.add(FieldReference(ownerReference, element, nameRange, typeRange))
+                val ownerRange = TextRange(range.startOffset, range.startOffset + ownerSeparatorStartIdx)
+                val ownerReference = TypeReference(element, ownerRange)
+                references.add(ownerReference)
+
+                // Field type part
+                val fieldSeparatorRange = "\\s+".toRegex().find(fieldRedirectText, ownerSeparatorEndIdx)?.range
+                val fieldSeparatorStart = fieldSeparatorRange?.first ?: fieldRedirectText.length
+                val fieldSeparatorEnd = fieldSeparatorRange?.last?.plus(1) ?: fieldRedirectText.length
+
+                val typeRange = TextRange(range.startOffset + ownerSeparatorEndIdx, range.startOffset + fieldSeparatorStart)
+                if (!typeIsPrimitive(typeRange.substring(element.text))) {
+                    references.add(TypeReference(element, typeRange))
                 } else {
-                    // TODO: WHOLE ERROR
+                    primitives.add(typeRange)
                 }
+
+                if (fieldSeparatorEnd != fieldRedirectText.length) {
+                    val nameRange = TextRange(range.startOffset + fieldSeparatorEnd, range.startOffset + fieldRedirectText.length)
+                    references.add(FieldReference(ownerReference, element, nameRange, typeRange))
+                }
+
+                // TODO: WHOLE ERROR
 
                 element.putUserData(PRIMITIVES_KEY, primitives)
                 return references.toArray(arrayOf())
