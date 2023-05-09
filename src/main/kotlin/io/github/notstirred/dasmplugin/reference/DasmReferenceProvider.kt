@@ -1,15 +1,14 @@
 package io.github.notstirred.dasmplugin.reference
 
 import com.intellij.json.psi.JsonObject
-import com.intellij.json.psi.JsonProperty
 import com.intellij.json.psi.JsonStringLiteral
 import com.intellij.psi.*
 import com.intellij.util.containers.map2Array
 import io.github.notstirred.dasmplugin.DasmLanguage
 
-object JavaClassReferenceProvider : ClassReferenceProvider() {
+object DasmReferenceProvider : ClassReferenceProvider() {
     override fun typeIsPrimitive(name: String): Boolean {
-        return DasmLanguage.PRIMITIVES.contains(name);
+        return DasmLanguage.PRIMITIVES.contains(name)
     }
 
     override fun resolveClass(element: PsiElement, name: String): Array<ResolveResult> {

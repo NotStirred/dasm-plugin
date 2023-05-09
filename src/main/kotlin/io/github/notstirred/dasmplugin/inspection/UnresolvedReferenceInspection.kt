@@ -5,7 +5,6 @@ import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.json.psi.JsonElementVisitor
 import com.intellij.json.psi.JsonProperty
 import com.intellij.json.psi.JsonStringLiteral
-import com.intellij.json.psi.impl.JsonPropertyImpl
 import com.intellij.psi.PsiElementVisitor
 import io.github.notstirred.dasmplugin.reference.InspectionReference
 

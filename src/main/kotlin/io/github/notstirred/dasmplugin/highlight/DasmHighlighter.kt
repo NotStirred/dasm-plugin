@@ -73,7 +73,7 @@ class DasmHighlighter : HighlightVisitor {
         holder: HighlightInfoHolder,
         action: Runnable
     ): Boolean {
-        this.holder = holder;
+        this.holder = holder
         action.run()
         return true
     }
