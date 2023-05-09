@@ -4,6 +4,7 @@ import com.intellij.json.psi.JsonObject
 import com.intellij.json.psi.JsonStringLiteral
 import com.intellij.psi.*
 import com.intellij.util.containers.map2Array
+import com.intellij.util.containers.stream
 import io.github.notstirred.dasmplugin.DasmLanguage
 
 object DasmReferenceProvider : ClassReferenceProvider() {
@@ -25,6 +26,13 @@ object DasmReferenceProvider : ClassReferenceProvider() {
         }
 
         return ResolveResult.EMPTY_ARRAY
+    }
+
+    override fun classVariants(element: PsiElement): Array<Any> {
+        val facade = JavaPsiFacade.getInstance(element.project)
+        return importsInFile(element.containingFile).stream().map {
+            (it as? JsonStringLiteral)?.value?.let { it1 -> facade.findClass(it1, element.resolveScope) }
+        }.filter { it != null }.toArray()
     }
 
     override fun resolveMethod(owner: PsiClass, element: PsiElement, name: String, parameterTypeNames: List<String>): Array<ResolveResult> {

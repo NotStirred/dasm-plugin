@@ -25,6 +25,8 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
 
     abstract fun resolveClass(element: PsiElement, name: String): Array<ResolveResult>
 
+    abstract fun classVariants(element: PsiElement): Array<Any>
+
     abstract fun resolveMethod(owner: PsiClass, element: PsiElement, name: String, parameterTypeNames: List<String>): Array<ResolveResult>
 
     abstract fun resolveField(owner: PsiClass, element: PsiElement, name: String, typeName: String): Array<ResolveResult>
@@ -247,6 +249,10 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
 
         override fun multiResolve(incompleteCode: Boolean): Array<ResolveResult> {
             return this@ClassReferenceProvider.resolveClass(this.element, this.qualifiedName)
+        }
+
+        override fun getVariants(): Array<Any> {
+            return this@ClassReferenceProvider.classVariants(this.element)
         }
     }
 
