@@ -338,10 +338,8 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                     primitives.add(typeRange)
                 }
 
-                if (fieldSeparatorEnd != fieldRedirectText.length) {
-                    val nameRange = TextRange(range.startOffset + fieldSeparatorEnd, range.startOffset + fieldRedirectText.length)
-                    references.add(FieldReference(ownerReference, element, nameRange, typeRange))
-                }
+                val nameRange = TextRange(range.startOffset + fieldSeparatorEnd, range.startOffset + fieldRedirectText.length)
+                references.add(FieldReference(ownerReference, element, nameRange, typeRange))
 
                 // TODO: WHOLE ERROR
 
