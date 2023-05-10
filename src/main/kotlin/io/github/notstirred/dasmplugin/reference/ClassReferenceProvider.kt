@@ -151,46 +151,53 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
         val parent = element.parent
         if (parent is JsonProperty) {
             if (parent.children[0] == element) { // is key
-                val find = METHOD_REDIRECT_REGEX.find(element.text)
                 val references = ArrayList<PsiReference>()
                 val primitives = ArrayList<TextRange>()
 
-                if (find != null && find.groups.size == 5) {
-                    // OWNER
-                    val ownerRange = TextRange(find.groups[1]!!.range.first, find.groups[1]!!.range.last + 1)
-                    val ownerReference = TypeReference(element, ownerRange)
-                    references.add(ownerReference)
+                val range = ElementManipulators.getManipulator(element).getRangeInElement(element)
+                val methodRedirectText = range.substring(element.text)
 
+                // Owner type part
+                val ownerSeparatorRange = "\\s*\\|\\s*".toRegex().find(methodRedirectText)?.range
+                val ownerSeparatorStartIdx = ownerSeparatorRange?.first ?: methodRedirectText.length
+                val ownerSeparatorEndIdx = ownerSeparatorRange?.last?.plus(1) ?: methodRedirectText.length
 
-                    // RETURN TYPE
-                    val returnTypeRange = TextRange(find.groups[2]!!.range.first, find.groups[2]!!.range.last + 1)
-                    if (!typeIsPrimitive(returnTypeRange.substring(element.text))) {
-                        references.add(TypeReference(element, returnTypeRange))
-                    } else {
-                        primitives.add(returnTypeRange)
-                    }
+                val ownerRange = TextRange(range.startOffset, range.startOffset + ownerSeparatorStartIdx)
+                val ownerReference = TypeReference(element, ownerRange)
+                references.add(ownerReference)
 
-                    // PARAMETERS
-                    val parametersRange = TextRange(find.groups[4]!!.range.first, find.groups[4]!!.range.last + 1)
-                    val parametersText = parametersRange.substring(element.text)
-                    val parameters = "(?:\\w|\\\$)+".toRegex().findAll(parametersText)
-                    for (parameter in parameters.iterator()) {
-                        val intRange = parameter.range.withOffset(parametersRange.startOffset)
-                        val range = TextRange(intRange.first, intRange.last + 1) // inclusive -> exclusive
-                        if (!typeIsPrimitive(range.substring(element.text))) {
-                            references.add(TypeReference(element, range))
-                        } else {
-                            primitives.add(range)
-                        }
-                    }
+                // Method return type part
+                val methodSeparatorRange = "\\s+".toRegex().find(methodRedirectText, ownerSeparatorEndIdx)?.range
+                val methodSeparatorStart = methodSeparatorRange?.first ?: methodRedirectText.length
+                val methodSeparatorEnd = methodSeparatorRange?.last?.plus(1) ?: methodRedirectText.length
 
-                    // METHOD NAME
-                    val methodNameRange = TextRange(find.groups[3]!!.range.first, find.groups[3]!!.range.last + 1)
-                    references.add(MethodReference(ownerReference, element, methodNameRange, parameters.map { it.value }.toList()))
-
+                val typeRange = TextRange(range.startOffset + ownerSeparatorEndIdx, range.startOffset + methodSeparatorStart)
+                if (!typeIsPrimitive(typeRange.substring(element.text))) {
+                    references.add(TypeReference(element, typeRange))
                 } else {
-                    // TODO: WHOLE ERROR
+                    primitives.add(typeRange)
                 }
+
+                // PARAMETERS
+                val parametersRange = TextRange(element.text.indexOf('(') + 1, maxOf(element.text.indexOf(')'), element.text.length))
+                val parametersText = parametersRange.substring(element.text)
+                val parameters = "(?:\\w|\\\$)+".toRegex().findAll(parametersText)
+                for (parameter in parameters.iterator()) {
+                    val intRange = parameter.range.withOffset(parametersRange.startOffset)
+                    val range = TextRange(intRange.first, intRange.last + 1) // inclusive -> exclusive
+                    if (!typeIsPrimitive(range.substring(element.text))) {
+                        references.add(TypeReference(element, range))
+                    } else {
+                        primitives.add(range)
+                    }
+                }
+
+                if (methodSeparatorEnd != methodRedirectText.length) {
+                    val nameRange = TextRange(range.startOffset + methodSeparatorEnd, parametersRange.startOffset - 1)
+                    references.add(MethodReference(ownerReference, element, nameRange, parameters.map { it.value }.toList()))
+                }
+
+                // TODO: WHOLE ERROR
 
                 element.putUserData(PRIMITIVES_KEY, primitives)
                 return references.toArray(arrayOf())
