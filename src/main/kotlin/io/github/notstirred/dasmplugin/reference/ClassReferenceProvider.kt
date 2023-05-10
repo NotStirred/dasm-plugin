@@ -24,7 +24,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
 
     abstract fun resolveClass(element: PsiElement, name: String): Array<ResolveResult>
 
-    abstract fun classVariants(element: PsiElement): Array<Any>
+    abstract fun typeVariants(element: PsiElement): Array<Any>
 
     abstract fun resolveMethod(owner: PsiClass, element: PsiElement, name: String, parameterTypeNames: List<String>): Array<ResolveResult>
 
@@ -371,7 +371,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
         }
 
         override fun getVariants(): Array<Any> {
-            return this@ClassReferenceProvider.classVariants(this.element)
+            return this@ClassReferenceProvider.typeVariants(this.element)
         }
     }
 

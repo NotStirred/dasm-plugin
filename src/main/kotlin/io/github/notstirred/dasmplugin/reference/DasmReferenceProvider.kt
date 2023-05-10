@@ -28,11 +28,15 @@ object DasmReferenceProvider : ClassReferenceProvider() {
         return ResolveResult.EMPTY_ARRAY
     }
 
-    override fun classVariants(element: PsiElement): Array<Any> {
+    override fun typeVariants(element: PsiElement): Array<Any> {
+        val variants = ArrayList<Any>()
+
         val facade = JavaPsiFacade.getInstance(element.project)
-        return importsInFile(element.containingFile).stream().map {
+        importsInFile(element.containingFile).stream().map {
             (it as? JsonStringLiteral)?.value?.let { it1 -> facade.findClass(it1, element.resolveScope) }
-        }.filter { it != null }.toArray()
+        }.filter { it != null }.forEach { variants.add(it!!) }
+        variants.addAll(DasmLanguage.PRIMITIVES)
+        return variants.toArray()
     }
 
     override fun resolveMethod(owner: PsiClass, element: PsiElement, name: String, parameterTypeNames: List<String>): Array<ResolveResult> {
