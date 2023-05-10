@@ -100,15 +100,14 @@ object DasmReferenceProvider : ClassReferenceProvider() {
         val methodStrings = ArrayList<String>()
         methods.forEach { method ->
             val sb = StringBuilder(method.name).append('(')
-            method.parameters.mapNotNull {
-                if (it is PsiParameter) {
-                    var paramTypeName = it.type.presentableText.replace('.', '$')
-                    paramTypeName = trimGenerics(paramTypeName)
+            method.parameters.mapNotNull { param ->
+                if (param is PsiParameter) {
+                    var paramTypeName = typeName(param.type)
 
-                    method.typeParameters.forEach {
-                        if (it.name == paramTypeName) {
-                            return@mapNotNull if (it.bounds.isNotEmpty()) { // bounds are known
-                                trimGenerics((it.bounds[0] as PsiType).presentableText.replace('.', '$')) //only the first type bound is considered in the bytecode for some reason...
+                    method.typeParameters.forEach { typeParameter ->
+                        if (typeParameter.name == paramTypeName) {
+                            return@mapNotNull if (typeParameter.bounds.isNotEmpty()) { // bounds are known
+                                typeName(typeParameter.bounds[0] as PsiType) //only the first type bound is considered in the bytecode for some reason...
                             } else { // bounds are Object
                                 "Object"
                             }
@@ -123,6 +122,12 @@ object DasmReferenceProvider : ClassReferenceProvider() {
         }
 
         return methodStrings.toArray()
+    }
+
+    private fun typeName(type: PsiType): String {
+        val name = trimGenerics(type.canonicalText)
+        val indexOfFirstUpperCaseChar = "[A-Z]".toRegex().find(name)?.range?.first ?: 0
+        return name.substring(indexOfFirstUpperCaseChar).replace('.', '$')
     }
 
     override fun resolveField(owner: PsiClass, element: PsiElement, name: String, typeName: String): Array<ResolveResult> {
