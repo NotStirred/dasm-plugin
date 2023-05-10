@@ -17,9 +17,6 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
         private val TARGET_METHOD_REGEX = "\"\\s*(\\S+)\\s+((?:\\w|\\\$)+)\\s*\\((.*)\\)\"".toRegex()
     }
 
-    val description
-        get() = "class '%s'"
-
     abstract fun typeIsPrimitive(name: String): Boolean
 
     abstract fun resolveClass(element: PsiElement, name: String): Array<ResolveResult>
@@ -357,8 +354,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
     private inner class TypeReference(element: PsiElement, range: TextRange) :
         PsiReferenceBase.Poly<PsiElement>(element, range, false), InspectionReference {
 
-        override val description: String
-            get() = this@ClassReferenceProvider.description
+        override val description = "type '%s'"
         override val unresolved: Boolean
             get() = multiResolve(false).isEmpty()
         override val referenceType: ReferenceType
@@ -380,8 +376,8 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
     private inner class MethodReference(private val owner: TypeReference, element: PsiElement, range: TextRange, private val parameterTypeNames: List<String>) :
         PsiReferenceBase.Poly<PsiElement>(element, range, false), InspectionReference {
 
-        override val description: String
-            get() = this@ClassReferenceProvider.description
+        override val description = "method '%s'"
+
         override val unresolved: Boolean
             get() = multiResolve(false).isEmpty()
         override val referenceType: ReferenceType
@@ -416,8 +412,8 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
     private inner class FieldReference(private val owner: TypeReference, element: PsiElement, range: TextRange, private val typeRange: TextRange) :
         PsiReferenceBase.Poly<PsiElement>(element, range, false), InspectionReference {
 
-        override val description: String
-            get() = this@ClassReferenceProvider.description
+        override val description = "field '%s'"
+
         override val unresolved: Boolean
             get() = multiResolve(false).isEmpty()
         override val referenceType: ReferenceType
