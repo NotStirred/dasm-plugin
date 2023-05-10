@@ -181,14 +181,41 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                     primitives.add(typeRange)
                 }
 
-                // PARAMETERS
+                // PARAMETERS & METHOD
+                val parentValue = parent.children[1]
+                val owner = if (parentValue is JsonObject && parentValue.findProperty("mappingsOwner") != null) {
+                    // use mappings owner if present
+                    val mappingsOwnerProperty = parentValue.findProperty("mappingsOwner")
+                    if (mappingsOwnerProperty?.value is JsonStringLiteral) {
+                        (mappingsOwnerProperty.value as JsonStringLiteral).references
+                    } else {
+                        null
+                    }
+                } else { // otherwise use target class as owner
+                    arrayOf(ownerReference)
+                }
+
                 val indexOfParametersStart = element.text.indexOf('(')
                 if (indexOfParametersStart > 0) {
                     val parameters = getAndAddParameterReferences(indexOfParametersStart, element, references, primitives)
 
-                    addMethodReference(element, range.startOffset + methodSeparatorEnd, references, ownerReference, parameters.map { it.value }.toList())
+                    if (owner != null) {
+                        for (mappingsOwnerReference in owner) {
+                            if (mappingsOwnerReference is TypeReference) {
+                                addMethodReference(element, range.startOffset + methodSeparatorEnd, references, mappingsOwnerReference, parameters.map { it.value }.toList())
+                                break
+                            }
+                        }
+                    }
                 } else { // couldn't find a `(` so assume the method name span is to the end
-                    addMethodReferenceOrAtEnd(element, range, methodSeparatorEnd, references, ownerReference)
+                    if (owner != null) {
+                        for (mappingsOwnerReference in owner) {
+                            if (mappingsOwnerReference is TypeReference) {
+                                addMethodReferenceOrAtEnd(element, range, methodSeparatorEnd, references, mappingsOwnerReference)
+                                break
+                            }
+                        }
+                    }
                 }
 
                 // TODO: WHOLE ERROR
