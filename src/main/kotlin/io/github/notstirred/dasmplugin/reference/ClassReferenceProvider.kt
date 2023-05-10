@@ -81,64 +81,67 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
         val parent = element.parent
         if (parent is JsonProperty) {
             if (parent.children[0] == element) { // is key
-                val find = TARGET_METHOD_REGEX.find(element.text)
                 val references = ArrayList<PsiReference>()
                 val primitives = ArrayList<TextRange>()
 
-                if (find != null && find.groups.size == 4) {
-                    val returnTypeRange = TextRange(find.groups[1]!!.range.first, find.groups[1]!!.range.last + 1)
-                    if (!typeIsPrimitive(returnTypeRange.substring(element.text))) {
-                        references.add(TypeReference(element, returnTypeRange))
-                    } else {
-                        primitives.add(returnTypeRange)
-                    }
+                val range = ElementManipulators.getManipulator(element).getRangeInElement(element)
+                val methodRedirectText = range.substring(element.text)
 
-                    val parametersRange = TextRange(find.groups[3]!!.range.first, find.groups[3]!!.range.last + 1)
-                    val parametersText = parametersRange.substring(element.text)
-                    val parameters = "(?:\\w|\\\$)+".toRegex().findAll(parametersText)
-                    for (parameter in parameters.iterator()) {
-                        val intRange = parameter.range.withOffset(parametersRange.startOffset)
-                        val range = TextRange(intRange.first, intRange.last + 1) // inclusive -> exclusive
-                        if (!typeIsPrimitive(range.substring(element.text))) {
-                            references.add(TypeReference(element, range))
-                        } else {
-                            primitives.add(range)
-                        }
+                // Method return type part
+                val methodSeparatorRange = "\\s+".toRegex().find(methodRedirectText)?.range
+                val methodSeparatorStart = methodSeparatorRange?.first ?: methodRedirectText.length
+                val methodSeparatorEnd = methodSeparatorRange?.last?.plus(1) ?: methodRedirectText.length
+
+                val typeRange = TextRange(range.startOffset, range.startOffset + methodSeparatorStart)
+                if (!typeIsPrimitive(typeRange.substring(element.text))) {
+                    references.add(TypeReference(element, typeRange))
+                } else {
+                    primitives.add(typeRange)
+                }
+
+                // METHOD OWNER
+                val parentValue = parent.children[1]
+                val owner = if (parentValue is JsonObject && parentValue.findProperty("mappingsOwner") != null) {
+                    // use mappings owner if present
+                    val mappingsOwnerProperty = parentValue.findProperty("mappingsOwner")
+                    if (mappingsOwnerProperty?.value is JsonStringLiteral) {
+                        mappingsOwnerProperty.value
+                    } else {
+                        null
                     }
+                } else { // otherwise use target class as owner
+                    element.parent?.parent?.parent?.parent?.parent?.children?.get(0)
+                }
+
+                // PARAMETERS
+                val indexOfParametersStart = element.text.indexOf('(')
+                if (indexOfParametersStart > 0) {
+                    val parameters = getAndAddParameterReferences(indexOfParametersStart, element, references, primitives)
 
                     // METHOD NAME
-                    val parentValue = parent.children[1]
-                    val owner = if (parentValue is JsonObject && parentValue.findProperty("mappingsOwner") != null) {
-                        // use mappings owner if present
-                        val mappingsOwnerProperty = parentValue.findProperty("mappingsOwner")
-                        if (mappingsOwnerProperty?.value is JsonStringLiteral) {
-                            mappingsOwnerProperty.value
-                        } else {
-                            null
-                        }
-                    } else { // otherwise use target class as owner
-                        element.parent?.parent?.parent?.parent?.parent?.children?.get(0)
-                    }
-
                     if (owner != null) {
                         for (ownerReference in owner.references) {
                             if (ownerReference is TypeReference) {
-                                val methodNameRange =
-                                    TextRange(find.groups[2]!!.range.first, find.groups[2]!!.range.last + 1)
-                                references.add(
-                                    MethodReference(
-                                        ownerReference,
-                                        element,
-                                        methodNameRange,
-                                        parameters.map { it.value }.toList()
-                                    )
-                                )
+                                addMethodReference(element, range.startOffset + methodSeparatorEnd, references, ownerReference, parameters.map { it.value }.toList())
+                                break
                             }
                         }
                     }
                 } else {
-                    // TODO: WHOLE ERROR
+                    // METHOD NAME
+                    // couldn't find a `(` so assume the method name span is to the end
+                    if (owner != null) {
+                        for (ownerReference in owner.references) {
+                            if (ownerReference is TypeReference) {
+                                addMethodReferenceOrAtEnd(element, range, methodSeparatorEnd, references, ownerReference)
+                                break
+                            }
+                        }
+                    }
+
                 }
+
+                // TODO: WHOLE ERROR
 
                 element.putUserData(PRIMITIVES_KEY, primitives)
                 return references.toArray(arrayOf())
@@ -167,7 +170,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                 references.add(ownerReference)
 
                 // Method return type part
-                val methodSeparatorRange = "\\s+".toRegex().find(methodRedirectText, ownerSeparatorEndIdx)?.range
+                val methodSeparatorRange = "\\s".toRegex().find(methodRedirectText, ownerSeparatorEndIdx)?.range
                 val methodSeparatorStart = methodSeparatorRange?.first ?: methodRedirectText.length
                 val methodSeparatorEnd = methodSeparatorRange?.last?.plus(1) ?: methodRedirectText.length
 
@@ -179,22 +182,13 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                 }
 
                 // PARAMETERS
-                val parametersRange = TextRange(element.text.indexOf('(') + 1, maxOf(element.text.indexOf(')'), element.text.length))
-                val parametersText = parametersRange.substring(element.text)
-                val parameters = "(?:\\w|\\\$)+".toRegex().findAll(parametersText)
-                for (parameter in parameters.iterator()) {
-                    val intRange = parameter.range.withOffset(parametersRange.startOffset)
-                    val range = TextRange(intRange.first, intRange.last + 1) // inclusive -> exclusive
-                    if (!typeIsPrimitive(range.substring(element.text))) {
-                        references.add(TypeReference(element, range))
-                    } else {
-                        primitives.add(range)
-                    }
-                }
+                val indexOfParametersStart = element.text.indexOf('(')
+                if (indexOfParametersStart > 0) {
+                    val parameters = getAndAddParameterReferences(indexOfParametersStart, element, references, primitives)
 
-                if (methodSeparatorEnd != methodRedirectText.length) {
-                    val nameRange = TextRange(range.startOffset + methodSeparatorEnd, parametersRange.startOffset - 1)
-                    references.add(MethodReference(ownerReference, element, nameRange, parameters.map { it.value }.toList()))
+                    addMethodReference(element, range.startOffset + methodSeparatorEnd, references, ownerReference, parameters.map { it.value }.toList())
+                } else { // couldn't find a `(` so assume the method name span is to the end
+                    addMethodReferenceOrAtEnd(element, range, methodSeparatorEnd, references, ownerReference)
                 }
 
                 // TODO: WHOLE ERROR
@@ -204,6 +198,86 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
             }
         }
         return arrayOf()
+    }
+
+    /**
+     * Adds a method reference for the method name text, or at the end of the text if there is no match (for autocomplete)
+     */
+    private fun addMethodReferenceOrAtEnd(
+        element: PsiElement,
+        range: TextRange,
+        methodSeparatorEnd: Int,
+        references: ArrayList<PsiReference>,
+        ownerReference: TypeReference
+    ) {
+        val methodName = "((?:\\w|\\\$)+|\$)+".toRegex().find(element.text, range.startOffset + methodSeparatorEnd)
+        if (methodName != null) {
+            if (methodName.range.first >= element.text.length - 1) {
+                // ^ if the range starts at the end of the text, add a reference to just the end characters (for autocomplete)
+                if (range.startOffset + methodSeparatorEnd <= element.text.length - 1) {
+                    references.add(
+                        MethodReference(
+                            ownerReference,
+                            element,
+                            TextRange(range.startOffset + methodSeparatorEnd, element.text.length - 1),
+                            ArrayList()
+                        )
+                    )
+                }
+            } else {
+                // normal method reference
+                references.add(
+                    MethodReference(
+                        ownerReference,
+                        element,
+                        TextRange(methodName.range.first, methodName.range.last + 1),
+                        ArrayList()
+                    )
+                )
+            }
+        }
+    }
+
+    private fun addMethodReference(
+        element: PsiElement,
+        startIdx: Int,
+        references: ArrayList<PsiReference>,
+        ownerReference: TypeReference,
+        parameters: List<String>
+    ) {
+        val methodName = "((?:\\w|\\\$)+|\$)".toRegex().find(element.text, startIdx)
+        if (methodName != null) {
+            references.add(
+                MethodReference(
+                    ownerReference,
+                    element,
+                    TextRange(methodName.range.first, methodName.range.last + 1),
+                    parameters
+                )
+            )
+        }
+    }
+
+    private fun getAndAddParameterReferences(
+        indexOfParametersStart: Int,
+        element: PsiElement,
+        references: ArrayList<PsiReference>,
+        primitives: ArrayList<TextRange>
+    ): Sequence<MatchResult> {
+        val parametersRange =
+            TextRange(indexOfParametersStart + 1, maxOf(element.text.indexOf(')'), element.text.length))
+        val parametersText = parametersRange.substring(element.text)
+        val parameters = "(?:\\w|\\\$)+".toRegex().findAll(parametersText)
+        for (parameter in parameters.iterator()) {
+            val intRange = parameter.range.withOffset(parametersRange.startOffset)
+            val range = TextRange(intRange.first, intRange.last + 1) // inclusive -> exclusive
+            if (!typeIsPrimitive(range.substring(element.text))) {
+                references.add(TypeReference(element, range))
+            } else {
+                primitives.add(range)
+            }
+        }
+        return parameters
     }
 
     private fun fieldRedirectReferences(element: PsiElement): Array<PsiReference> {
