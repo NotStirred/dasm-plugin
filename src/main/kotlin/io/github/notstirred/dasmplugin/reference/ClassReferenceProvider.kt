@@ -28,6 +28,8 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
 
     abstract fun resolveMethod(owner: PsiClass, element: PsiElement, name: String, parameterTypeNames: List<String>): Array<ResolveResult>
 
+    abstract fun methodVariants(element: PsiElement, owner: PsiClass): Array<Any>
+
     abstract fun resolveField(owner: PsiClass, element: PsiElement, name: String, typeName: String): Array<ResolveResult>
 
     abstract fun fieldVariants(element: PsiElement, owner: PsiClass): Array<Any>
@@ -400,6 +402,14 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                 )
             }
             return ResolveResult.EMPTY_ARRAY
+        }
+
+        override fun getVariants(): Array<Any> {
+            val ownerClass = this.owner.resolve() as? PsiClass?
+            if (ownerClass != null) {
+                return this@ClassReferenceProvider.methodVariants(this.element, ownerClass)
+            }
+            return arrayOf()
         }
     }
 

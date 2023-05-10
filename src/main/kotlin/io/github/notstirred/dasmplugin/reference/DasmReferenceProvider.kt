@@ -95,6 +95,36 @@ object DasmReferenceProvider : ClassReferenceProvider() {
         return ResolveResult.EMPTY_ARRAY
     }
 
+    override fun methodVariants(element: PsiElement, owner: PsiClass): Array<Any> {
+        val methods = owner.allMethods
+        val methodStrings = ArrayList<String>()
+        methods.forEach { method ->
+            val sb = StringBuilder(method.name).append('(')
+            method.parameters.mapNotNull {
+                if (it is PsiParameter) {
+                    var paramTypeName = it.type.presentableText.replace('.', '$')
+                    paramTypeName = trimGenerics(paramTypeName)
+
+                    method.typeParameters.forEach {
+                        if (it.name == paramTypeName) {
+                            return@mapNotNull if (it.bounds.isNotEmpty()) { // bounds are known
+                                trimGenerics((it.bounds[0] as PsiType).presentableText.replace('.', '$')) //only the first type bound is considered in the bytecode for some reason...
+                            } else { // bounds are Object
+                                "Object"
+                            }
+                        }
+                    }
+                    paramTypeName
+                } else {
+                    "__FIXME__"
+                }
+            }.joinTo(sb, ", ").append(")")
+            methodStrings.add(sb.toString())
+        }
+
+        return methodStrings.toArray()
+    }
+
     override fun resolveField(owner: PsiClass, element: PsiElement, name: String, typeName: String): Array<ResolveResult> {
         val field = owner.findFieldByName(name, false)
         if (field != null) {
