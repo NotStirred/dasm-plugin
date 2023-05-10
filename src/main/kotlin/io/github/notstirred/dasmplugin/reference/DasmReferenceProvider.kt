@@ -108,6 +108,14 @@ object DasmReferenceProvider : ClassReferenceProvider() {
         return ResolveResult.EMPTY_ARRAY
     }
 
+    override fun fieldVariants(element: PsiElement, owner: PsiClass): Array<Any> {
+        val fieldStrings = ArrayList<String>()
+        owner.allFields.forEach {
+            fieldStrings.add(it.name)
+        }
+        return fieldStrings.toArray()
+    }
+
     private fun trimGenerics(resolvedClassName: String) : String {
         val indexOfGeneric = resolvedClassName.indexOf('<')
         if (indexOfGeneric == -1) {
