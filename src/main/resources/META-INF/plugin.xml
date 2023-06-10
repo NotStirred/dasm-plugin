@@ -24,13 +24,13 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <fileType name="DASM Configuration" language="JSON" implementationClass="io.github.notstirred.dasmplugin.DasmConfigFileType" fieldName="INSTANCE" extensions="dasm"/>
+        <fileType name="DASM Configuration" language="JSON5" implementationClass="io.github.notstirred.dasmplugin.DasmConfigFileType" fieldName="INSTANCE" extensions="dasm"/>
 
-        <psi.referenceContributor language="JSON" implementation="io.github.notstirred.dasmplugin.reference.DasmReferenceContributor"/>
+        <psi.referenceContributor language="JSON5" implementation="io.github.notstirred.dasmplugin.reference.DasmReferenceContributor"/>
         <localInspection displayName="Unresolved reference"
                          shortName="UnresolvedDasmReference"
                          groupName="Java"
-                         language="JSON"
+                         language="JSON5"
                          enabledByDefault="true"
                          level="ERROR"
                          hasStaticDescription="true"

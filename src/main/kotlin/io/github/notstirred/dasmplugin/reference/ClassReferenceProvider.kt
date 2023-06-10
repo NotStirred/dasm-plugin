@@ -13,8 +13,6 @@ import io.github.notstirred.dasmplugin.DasmLanguage
 abstract class ClassReferenceProvider : PsiReferenceProvider() {
     companion object {
         val PRIMITIVES_KEY = Key<List<TextRange>>("primitives")
-        private val METHOD_REDIRECT_REGEX = "\"((?:\\w|\\\$)+)\\s*\\|\\s*(\\S+)\\s+((?:\\w|\\\$)+)\\s*\\((.*)\\)\"".toRegex()
-        private val TARGET_METHOD_REGEX = "\"\\s*(\\S+)\\s+((?:\\w|\\\$)+)\\s*\\((.*)\\)\"".toRegex()
     }
 
     abstract fun typeIsPrimitive(name: String): Boolean
