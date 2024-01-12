@@ -40,6 +40,10 @@ object DasmReferenceProvider : ClassReferenceProvider() {
     }
 
     override fun resolveMethod(owner: PsiClass, element: PsiElement, name: String, parameterTypeNames: List<String>): Array<ResolveResult> {
+        val facade = JavaPsiFacade.getInstance(element.project)
+
+        val results = arrayListOf<ResolveResult>();
+
         val methods = owner.findMethodsByName(name, false)
         for (method in methods) {
             val parameters = method.parameters
@@ -61,10 +65,13 @@ object DasmReferenceProvider : ClassReferenceProvider() {
                                 continue@paramLoop
                             }
 
-                            // type arg
                             if (resolvedType != null) {
-                                val clazz = JavaPsiFacade.getInstance(element.project)
+                                val clazz = facade
                                     .findClass(resolvedType, element.resolveScope)
+                                // derived class
+                                // TODO ^
+
+                                // type arg
 
                                 if (clazz != null) {
                                     for (typeParameter in method.typeParameters) {
@@ -87,12 +94,12 @@ object DasmReferenceProvider : ClassReferenceProvider() {
                     break
                 }
                 if (isRightMethod) {
-                    return arrayOf(PsiElementResolveResult(method))
+                    results.add(PsiElementResolveResult(method))
                 }
             }
 
         }
-        return ResolveResult.EMPTY_ARRAY
+        return results.map2Array { resolveResult -> resolveResult }
     }
 
     override fun methodVariants(element: PsiElement, owner: PsiClass): Array<Any> {

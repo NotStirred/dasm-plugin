@@ -91,13 +91,6 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                 val methodSeparatorStart = methodSeparatorRange?.first ?: methodRedirectText.length
                 val methodSeparatorEnd = methodSeparatorRange?.last?.plus(1) ?: methodRedirectText.length
 
-                val typeRange = TextRange(range.startOffset, range.startOffset + methodSeparatorStart)
-                if (!typeIsPrimitive(typeRange.substring(element.text))) {
-                    references.add(TypeReference(element, typeRange))
-                } else {
-                    primitives.add(typeRange)
-                }
-
                 // METHOD OWNER
                 val parentValue = parent.children[1]
                 val owner = if (parentValue is JsonObject && parentValue.findProperty("mappingsOwner") != null) {
@@ -113,6 +106,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                 }
 
                 // PARAMETERS
+                var methodRef: MethodReference? = null
                 val indexOfParametersStart = element.text.indexOf('(')
                 if (indexOfParametersStart > 0) {
                     val parameters = getAndAddParameterReferences(indexOfParametersStart, element, references, primitives)
@@ -121,7 +115,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                     if (owner != null) {
                         for (ownerReference in owner.references) {
                             if (ownerReference is TypeReference) {
-                                addMethodReference(element, range.startOffset + methodSeparatorEnd, references, ownerReference, parameters.map { it.value }.toList())
+                                methodRef = methodReference(element, range.startOffset + methodSeparatorEnd, ownerReference, parameters.map { it.value }.toList());
                                 break
                             }
                         }
@@ -132,12 +126,22 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                     if (owner != null) {
                         for (ownerReference in owner.references) {
                             if (ownerReference is TypeReference) {
-                                addMethodReferenceOrAtEnd(element, range, methodSeparatorEnd, references, ownerReference)
+                                methodRef = methodReferenceOrAtEnd(element, range, methodSeparatorEnd, ownerReference);
                                 break
                             }
                         }
                     }
+                }
 
+                methodRef?.let {
+                    references.add(it)
+
+                    val typeRange = TextRange(range.startOffset, range.startOffset + methodSeparatorStart)
+                    if (!typeIsPrimitive(typeRange.substring(element.text))) {
+                        references.add(TypeReference(element, typeRange))
+                    } else {
+                        primitives.add(typeRange)
+                    }
                 }
 
                 // TODO: WHOLE ERROR
@@ -173,13 +177,6 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                 val methodSeparatorStart = methodSeparatorRange?.first ?: methodRedirectText.length
                 val methodSeparatorEnd = methodSeparatorRange?.last?.plus(1) ?: methodRedirectText.length
 
-                val typeRange = TextRange(range.startOffset + ownerSeparatorEndIdx, range.startOffset + methodSeparatorStart)
-                if (!typeIsPrimitive(typeRange.substring(element.text))) {
-                    references.add(TypeReference(element, typeRange))
-                } else {
-                    primitives.add(typeRange)
-                }
-
                 // PARAMETERS & METHOD
                 val parentValue = parent.children[1]
                 val owner = if (parentValue is JsonObject && parentValue.findProperty("mappingsOwner") != null) {
@@ -194,6 +191,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                     arrayOf(ownerReference)
                 }
 
+                var methodRef: MethodReference? = null;
                 val indexOfParametersStart = element.text.indexOf('(')
                 if (indexOfParametersStart > 0) {
                     val parameters = getAndAddParameterReferences(indexOfParametersStart, element, references, primitives)
@@ -201,7 +199,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                     if (owner != null) {
                         for (mappingsOwnerReference in owner) {
                             if (mappingsOwnerReference is TypeReference) {
-                                addMethodReference(element, range.startOffset + methodSeparatorEnd, references, mappingsOwnerReference, parameters.map { it.value }.toList())
+                                methodRef = methodReference(element, range.startOffset + methodSeparatorEnd, mappingsOwnerReference, parameters.map { it.value }.toList())
                                 break
                             }
                         }
@@ -210,11 +208,22 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
                     if (owner != null) {
                         for (mappingsOwnerReference in owner) {
                             if (mappingsOwnerReference is TypeReference) {
-                                addMethodReferenceOrAtEnd(element, range, methodSeparatorEnd, references, mappingsOwnerReference)
+                                methodRef = methodReferenceOrAtEnd(element, range, methodSeparatorEnd, mappingsOwnerReference)
                                 break
                             }
                         }
                     }
+                }
+
+                methodRef?.let {
+                    references.add(methodRef)
+                }
+                // Method return type
+                val typeRange = TextRange(range.startOffset + ownerSeparatorEndIdx, range.startOffset + methodSeparatorStart)
+                if (!typeIsPrimitive(typeRange.substring(element.text))) {
+                    references.add(TypeReference(element, typeRange))
+                } else {
+                    primitives.add(typeRange)
                 }
 
                 // TODO: WHOLE ERROR
@@ -229,59 +238,53 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
     /**
      * Adds a method reference for the method name text, or at the end of the text if there is no match (for autocomplete)
      */
-    private fun addMethodReferenceOrAtEnd(
+    private fun methodReferenceOrAtEnd(
         element: PsiElement,
         range: TextRange,
         methodSeparatorEnd: Int,
-        references: ArrayList<PsiReference>,
         ownerReference: TypeReference
-    ) {
+    ): MethodReference? {
         val methodName = "((?:\\w|\\\$)+|\$)+".toRegex().find(element.text, range.startOffset + methodSeparatorEnd)
         if (methodName != null) {
             if (methodName.range.first >= element.text.length - 1) {
                 // ^ if the range starts at the end of the text, add a reference to just the end characters (for autocomplete)
                 if (range.startOffset + methodSeparatorEnd <= element.text.length - 1) {
-                    references.add(
-                        MethodReference(
-                            ownerReference,
-                            element,
-                            TextRange(range.startOffset + methodSeparatorEnd, element.text.length - 1),
-                            ArrayList()
-                        )
+                    return MethodReference(
+                        ownerReference,
+                        element,
+                        TextRange(range.startOffset + methodSeparatorEnd, element.text.length - 1),
+                        ArrayList()
                     )
                 }
             } else {
                 // normal method reference
-                references.add(
-                    MethodReference(
-                        ownerReference,
-                        element,
-                        TextRange(methodName.range.first, methodName.range.last + 1),
-                        ArrayList()
-                    )
-                )
-            }
-        }
-    }
-
-    private fun addMethodReference(
-        element: PsiElement,
-        startIdx: Int,
-        references: ArrayList<PsiReference>,
-        ownerReference: TypeReference,
-        parameters: List<String>
-    ) {
-        val methodName = "((?:\\w|\\\$)+|\$)".toRegex().find(element.text, startIdx)
-        if (methodName != null) {
-            references.add(
-                MethodReference(
+                return MethodReference(
                     ownerReference,
                     element,
                     TextRange(methodName.range.first, methodName.range.last + 1),
-                    parameters
+                    ArrayList()
                 )
+            }
+        }
+        return null
+    }
+
+    private fun methodReference(
+        element: PsiElement,
+        startIdx: Int,
+        ownerReference: TypeReference,
+        parameters: List<String>
+    ): MethodReference? {
+        val methodName = "((?:\\w|\\\$)+|\$)".toRegex().find(element.text, startIdx)
+        if (methodName != null) {
+            return MethodReference(
+                ownerReference,
+                element,
+                TextRange(methodName.range.first, methodName.range.last + 1),
+                parameters
             )
         }
+        return null;
     }
 
     private fun getAndAddParameterReferences(
@@ -349,7 +352,7 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
         return arrayOf()
     }
 
-    private inner class TypeReference(element: PsiElement, range: TextRange) :
+    private inner class TypeReference(element: PsiElement, range: TextRange, acceptsSubclasses: Boolean = false) :
         PsiReferenceBase.Poly<PsiElement>(element, range, false), InspectionReference {
 
         override val description = "type '%s'"
@@ -388,12 +391,14 @@ abstract class ClassReferenceProvider : PsiReferenceProvider() {
         override fun multiResolve(incompleteCode: Boolean): Array<ResolveResult> {
             val ownerClass = this.owner.resolve() as? PsiClass?
             if (ownerClass != null) {
-                return this@ClassReferenceProvider.resolveMethod(
+                // TODO: verify the return type is correct
+                val resolveMethod = this@ClassReferenceProvider.resolveMethod(
                     ownerClass,
                     this.element,
                     this.qualifiedName,
                     this.parameterTypeNames
                 )
+                return resolveMethod;
             }
             return ResolveResult.EMPTY_ARRAY
         }
