@@ -30,6 +30,8 @@ repositories {
 
 // Dependencies are managed with Gradle version catalog - read more: https://docs.gradle.org/current/userguide/platforms.html#sub:version-catalog
 dependencies {
+    implementation("io.github.notstirred:dasm:3.0.0")
+
     testImplementation(libs.junit)
     testImplementation(libs.opentest4j)
 
@@ -39,9 +41,12 @@ dependencies {
 
         // Plugin Dependencies. Uses `platformBundledPlugins` property from the gradle.properties file for bundled IntelliJ Platform plugins.
         bundledPlugins(providers.gradleProperty("platformBundledPlugins").map { it.split(',') })
+        bundledPlugin("com.intellij.java")
+        bundledPlugin("com.intellij.modules.json")
 
         // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file for plugin from JetBrains Marketplace.
         plugins(providers.gradleProperty("platformPlugins").map { it.split(',') })
+        plugin("com.demonwav.minecraft-dev:2025.1-1.8.5")
 
         testFramework(TestFrameworkType.Platform)
     }

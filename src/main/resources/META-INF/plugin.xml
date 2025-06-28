@@ -2,10 +2,12 @@
 <idea-plugin>
     <id>org.jetbrains.plugins.template</id>
     <name>DASM Dev</name>
-    <vendor>JetBrains</vendor>
+    <vendor>NotStirred</vendor>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.demonwav.minecraft-dev</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <psi.referenceContributor language="JAVA" implementation="io.github.notstirred.dasm.plugin.reference.DasmReferenceContributor"/>
     </extensions>
 </idea-plugin>
