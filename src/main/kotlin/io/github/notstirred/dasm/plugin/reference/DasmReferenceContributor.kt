@@ -6,5 +6,7 @@ import com.intellij.psi.PsiReferenceRegistrar
 class DasmReferenceContributor : PsiReferenceContributor() {
     override fun registerReferenceProviders(registrar: PsiReferenceRegistrar) {
         registrar.registerReferenceProvider(RefReference.ELEMENT_PATTERN, RefReference)
+
+        registrar.registerReferenceProvider(MethodReference.PATTERN, MethodReference)
     }
 }
