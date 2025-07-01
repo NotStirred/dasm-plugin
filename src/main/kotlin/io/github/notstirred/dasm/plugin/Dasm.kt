@@ -55,10 +55,8 @@ data class ContainerTypes(val from: PsiClass, val to: PsiClass) {
 
 val PsiClass.containerTypes: ContainerTypes?
     get() {
-        return cached {
-            this.annotations.find { isContainerType(it.qualifiedName) }?.let { annotation ->
-                ContainerTypes.create(annotation)
-            }
+        return this.annotations.find { isContainerType(it.qualifiedName) }?.let { annotation ->
+            ContainerTypes.create(annotation)
         }
     }
 
