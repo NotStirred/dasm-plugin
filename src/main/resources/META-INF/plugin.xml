@@ -18,5 +18,13 @@
                          level="ERROR"
                          hasStaticDescription="true"
                          implementationClass="io.github.notstirred.dasm.plugin.inspection.UnresolvedReferenceInspection"/>
+        <localInspection displayName="Deprecated Dasm Sig"
+                         shortName="DeprecatedDasmSig"
+                         groupName="Dasm"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         hasStaticDescription="true"
+                         implementationClass="io.github.notstirred.dasm.plugin.inspection.DeprecatedDasmSigInspection"/>
     </extensions>
 </idea-plugin>

@@ -40,6 +40,7 @@ data class ContainerTypes(val from: PsiClass, val to: PsiClass) {
                             null
                         }
                     }
+
                     INTRA_OWNER_CONTAINER -> {
                         val value =
                             parseClassRef(annotation.findDeclaredAttributeValue(null) as PsiAnnotation, annotation.project)
@@ -47,6 +48,7 @@ data class ContainerTypes(val from: PsiClass, val to: PsiClass) {
                             ContainerTypes(value, value)
                         }
                     }
+
                     else -> {
                         null
                     }
@@ -142,9 +144,10 @@ class Dasm {
                     val ann = mixinClass.getAnnotation(Dasm::class.qualifiedName!!)!!.qualifiedName
                     val annotationNode = AnnotationNode(TypeUtil.typeNameToDescriptor(ann))
                     val target = DasmImpl.parse(annotationNode).target()
-                    JavaPsiFacade.getInstance(project).findClasses(target.get().className, scope).toList().forEach { dasmTarget ->
-                        dasmTargetMap.computeIfAbsent(dasmTarget) { ArrayList() }.add(mixinClass)
-                    }
+                    JavaPsiFacade.getInstance(project).findClasses(target.get().className, scope).toList()
+                        .forEach { dasmTarget ->
+                            dasmTargetMap.computeIfAbsent(dasmTarget) { ArrayList() }.add(mixinClass)
+                        }
                 }
             }
 
