@@ -11,7 +11,7 @@ import com.intellij.psi.*
 import com.intellij.util.ProcessingContext
 import io.github.notstirred.dasm.plugin.DasmConstants.FIELD_REDIRECT
 import io.github.notstirred.dasm.plugin.DasmConstants.FIELD_TO_METHOD_REDIRECT
-import io.github.notstirred.dasm.plugin.containerTypes
+import io.github.notstirred.dasm.plugin.dasmSrcType
 import org.jetbrains.coverage.org.objectweb.asm.Type
 
 object FieldReference: PsiReferenceProvider() {
@@ -37,7 +37,7 @@ object FieldReference: PsiReferenceProvider() {
             val fieldType = Type.getType(match.groups["desc"]!!.value)
             val fieldName = match.groups["name"]!!.value
 
-            return element.findContainingClass()?.containerTypes?.from?.findFieldByName(fieldName, false)?.let { field ->
+            return element.findContainingClass()?.dasmSrcType?.findFieldByName(fieldName, false)?.let { field ->
                 if (field.typeElement!!.type.descriptor != fieldType.descriptor) {
                     return@let null
                 }
@@ -46,7 +46,7 @@ object FieldReference: PsiReferenceProvider() {
         }
 
         override fun getVariants(): Array<out Any?> {
-            val fromType = element.findContainingClass()?.containerTypes?.from
+            val fromType = element.findContainingClass()?.dasmSrcType
             val fields = ArrayList<PsiField>()
             fromType?.fields?.let { fields.addAll(it) }
 
@@ -54,11 +54,12 @@ object FieldReference: PsiReferenceProvider() {
                 .map {
                     JavaLookupElementBuilder.forField(it)
                         .withTypeText(it.typeElement?.type?.presentableText)
-                        .withBaseLookupString(StringBuilder()
-                            .append(it.name)
-                            .append(':')
-                            .append(it.descriptor)
-                            .toString()
+                        .withBaseLookupString(
+                            StringBuilder()
+                                .append(it.name)
+                                .append(':')
+                                .append(it.descriptor)
+                                .toString()
                         )
                 }.toTypedArray()
         }

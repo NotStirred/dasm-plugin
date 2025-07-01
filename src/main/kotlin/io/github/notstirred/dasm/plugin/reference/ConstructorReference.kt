@@ -10,7 +10,7 @@ import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.*
 import com.intellij.util.ProcessingContext
 import io.github.notstirred.dasm.plugin.DasmConstants.CONSTRUCTOR_TO_FACTORY_REDIRECT
-import io.github.notstirred.dasm.plugin.containerTypes
+import io.github.notstirred.dasm.plugin.dasmSrcType
 
 object ConstructorReference : PsiReferenceProvider() {
     val PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
@@ -27,11 +27,11 @@ object ConstructorReference : PsiReferenceProvider() {
         override fun methods(methodName: String): Array<out PsiMethod>? {
             if (methodName != "<init>")
                 return null
-            return element.findContainingClass()?.containerTypes?.from?.constructors
+            return element.findContainingClass()?.dasmSrcType?.constructors
         }
 
         override fun getVariants(): Array<out Any?> {
-            val fromType = element.findContainingClass()?.containerTypes?.from
+            val fromType = element.findContainingClass()?.dasmSrcType
             val methods = ArrayList<PsiMethod>()
             fromType?.constructors?.let { methods.addAll(it) }
 

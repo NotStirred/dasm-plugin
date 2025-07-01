@@ -1,14 +1,12 @@
 package io.github.notstirred.dasm.plugin
 
 import com.demonwav.mcdev.platform.mixin.MixinModule
-import com.demonwav.mcdev.util.cached
 import com.demonwav.mcdev.util.findAnnotations
 import com.demonwav.mcdev.util.resolveClass
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
-import com.intellij.psi.PsiMember
 import com.intellij.psi.search.GlobalSearchScope
 import io.github.notstirred.dasm.annotation.parse.DasmImpl
 import io.github.notstirred.dasm.api.annotations.Dasm
@@ -53,16 +51,17 @@ data class ContainerTypes(val from: PsiClass, val to: PsiClass) {
     }
 }
 
+val PsiClass.dasmSrcType: PsiClass?
+    get() {
+        this.dasmTarget?.let { return it }
+        this.containerTypes?.from.let { return it }
+    }
+
 val PsiClass.containerTypes: ContainerTypes?
     get() {
         return this.annotations.find { isContainerType(it.qualifiedName) }?.let { annotation ->
             ContainerTypes.create(annotation)
         }
-    }
-
-val PsiMember.containerTypes: ContainerTypes?
-    get() {
-        return this.containingClass?.containerTypes
     }
 
 fun isContainerType(qualifiedName: String?): Boolean {

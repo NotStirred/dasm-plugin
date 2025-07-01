@@ -10,7 +10,7 @@ import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.*
 import com.intellij.util.ProcessingContext
 import io.github.notstirred.dasm.plugin.DasmConstants.METHOD_REDIRECT
-import io.github.notstirred.dasm.plugin.containerTypes
+import io.github.notstirred.dasm.plugin.dasmSrcType
 import org.jetbrains.coverage.org.objectweb.asm.Type
 
 object MethodReference: PsiReferenceProvider() {
@@ -29,9 +29,9 @@ object MethodReference: PsiReferenceProvider() {
     open class Reference(element: PsiLiteral) : PsiReferenceBase<PsiLiteral>(element, false) {
         open fun methods(methodName: String): Array<out PsiMethod>? {
             return if (methodName == "<init>") {
-                element.findContainingClass()?.containerTypes?.from?.constructors
+                element.findContainingClass()?.dasmSrcType?.constructors
             } else {
-                element.findContainingClass()?.containerTypes?.from?.findMethodsByName(methodName, false)
+                element.findContainingClass()?.dasmSrcType?.findMethodsByName(methodName, false)
             }
         }
 
@@ -46,9 +46,9 @@ object MethodReference: PsiReferenceProvider() {
                 if (method.parameterList.parametersCount != methodType.argumentTypes.size) {
                     return@firstOrNull false
                 }
-                if (!method.parameterList.parameters.zip(methodType.argumentTypes).all { (psiParam, paramToMatch) ->
-                    psiParam.typeElement!!.type.descriptor == paramToMatch.descriptor
-                }) {
+                if (!method.parameterList.parameters.zip(methodType.argumentTypes)
+                        .all { (psiParam, paramToMatch) -> psiParam.typeElement!!.type.descriptor == paramToMatch.descriptor }
+                ) {
                     return@firstOrNull false
                 }
 
@@ -65,7 +65,7 @@ object MethodReference: PsiReferenceProvider() {
         }
 
         override fun getVariants(): Array<out Any?> {
-            val fromType = element.findContainingClass()?.containerTypes?.from
+            val fromType = element.findContainingClass()?.dasmSrcType
             val methods = ArrayList<PsiMethod>()
             fromType?.constructors?.let { methods.addAll(it) }
             fromType?.methods?.let { methods.addAll(it) }
@@ -73,10 +73,11 @@ object MethodReference: PsiReferenceProvider() {
             return methods
                 .map {
                     JavaLookupElementBuilder.forMethod(it, PsiSubstitutor.EMPTY)
-                        .withBaseLookupString(StringBuilder()
-                            .append(it.name)
-                            .append(it.descriptor)
-                            .toString()
+                        .withBaseLookupString(
+                            StringBuilder()
+                                .append(it.name)
+                                .append(it.descriptor)
+                                .toString()
                         )
                 }.toTypedArray()
         }
