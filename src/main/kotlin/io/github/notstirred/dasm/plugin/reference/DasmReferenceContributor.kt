@@ -8,5 +8,6 @@ class DasmReferenceContributor : PsiReferenceContributor() {
         registrar.registerReferenceProvider(RefReference.ELEMENT_PATTERN, RefReference)
 
         registrar.registerReferenceProvider(MethodReference.PATTERN, MethodReference)
+        registrar.registerReferenceProvider(ConstructorReference.PATTERN, ConstructorReference)
     }
 }
