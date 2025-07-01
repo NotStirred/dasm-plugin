@@ -3,10 +3,12 @@ package io.github.notstirred.dasm.plugin
 import com.demonwav.mcdev.platform.mixin.MixinModule
 import com.demonwav.mcdev.util.findAnnotations
 import com.demonwav.mcdev.util.resolveClass
+import com.demonwav.mcdev.util.resolveType
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiType
 import com.intellij.psi.search.GlobalSearchScope
 import io.github.notstirred.dasm.annotation.parse.DasmImpl
 import io.github.notstirred.dasm.api.annotations.Dasm
@@ -28,8 +30,10 @@ data class ContainerTypes(val from: PsiClass, val to: PsiClass) {
             return annotation.qualifiedName?.let {
                 when (it) {
                     TYPE_REDIRECT, INTER_OWNER_CONTAINER -> {
-                        val from = parseRef(annotation.findDeclaredAttributeValue("from") as PsiAnnotation, annotation.project)
-                        val to = parseRef(annotation.findDeclaredAttributeValue("to") as PsiAnnotation, annotation.project)
+                        val from =
+                            parseClassRef(annotation.findDeclaredAttributeValue("from") as PsiAnnotation, annotation.project)
+                        val to =
+                            parseClassRef(annotation.findDeclaredAttributeValue("to") as PsiAnnotation, annotation.project)
                         if (from != null && to != null) {
                             ContainerTypes(from, to)
                         } else {
@@ -37,7 +41,8 @@ data class ContainerTypes(val from: PsiClass, val to: PsiClass) {
                         }
                     }
                     INTRA_OWNER_CONTAINER -> {
-                        val value = parseRef(annotation.findDeclaredAttributeValue(null) as PsiAnnotation, annotation.project)
+                        val value =
+                            parseClassRef(annotation.findDeclaredAttributeValue(null) as PsiAnnotation, annotation.project)
                         value?.let {
                             ContainerTypes(value, value)
                         }
@@ -51,11 +56,25 @@ data class ContainerTypes(val from: PsiClass, val to: PsiClass) {
     }
 }
 
-val PsiClass.dasmSrcType: PsiClass?
+val PsiClass.dasmSrcTypeHierarchy: Iterable<PsiClass>?
     get() {
-        this.dasmTarget?.let { return it }
-        this.containerTypes?.from.let { return it }
+        if (this.dasmAnnotation != null) {
+            this.dasmTarget?.let { return listOf(it) }
+        } else { // it must be a container
+            return this.containerHierarchy()
+        }
+        return null
     }
+
+fun PsiClass.containerHierarchy(): List<PsiClass> {
+    var clazz: PsiClass? = this
+    val hierarchy = mutableListOf<ContainerTypes>()
+    while (clazz != null && clazz.containerTypes != null) {
+        hierarchy.add(clazz.containerTypes!!)
+        clazz = clazz.superClass
+    }
+    return hierarchy.map { it.from }
+}
 
 val PsiClass.containerTypes: ContainerTypes?
     get() {
@@ -70,15 +89,26 @@ fun isContainerType(qualifiedName: String?): Boolean {
             || qualifiedName.equals(INTRA_OWNER_CONTAINER)
 }
 
-fun parseRef(refAnnotation: PsiAnnotation, project: Project): PsiClass? {
+fun parseClassRef(refAnnotation: PsiAnnotation, project: Project): PsiClass? {
     refAnnotation.findDeclaredAttributeValue("value")?.let {
         return it.resolveClass()
     }
     refAnnotation.findDeclaredAttributeValue("string")?.let {
-        return JavaPsiFacade.getInstance(project).findClass(it.text.substring(1, it.textLength - 1), refAnnotation.resolveScope)
+        val facade = JavaPsiFacade.getInstance(project)
+        return facade.findClass(it.text.substring(1, it.textLength - 1), refAnnotation.resolveScope)
     }
+    return null
+}
 
-    return null;
+fun parseRef(refAnnotation: PsiAnnotation, project: Project): PsiType? {
+    refAnnotation.findDeclaredAttributeValue("value")?.let {
+        return it.resolveType()
+    }
+    refAnnotation.findDeclaredAttributeValue("string")?.let {
+        val facade = JavaPsiFacade.getInstance(project).parserFacade
+        return facade.createTypeFromText(it.text.substring(1, it.textLength - 1), refAnnotation)
+    }
+    return null
 }
 
 val PsiClass.dasmTarget: PsiClass?
@@ -89,8 +119,13 @@ val PsiClass.dasmTarget: PsiClass?
         val refTarget = dasmAnnotation.findDeclaredAttributeValue("target")?.findAnnotations()
             ?.first { it.qualifiedName.equals(REF) }
 
-        return refTarget?.let { parseRef(it, project) }
+        return refTarget?.let { parseClassRef(it, project) } ?: this
     }
+
+inline fun <T, R> Iterable<T>.splatMap(transform: (T) -> Array<R>): List<R> {
+    return this.map(transform).flatMap { it.toList() }
+}
+
 
 class Dasm {
     companion object {

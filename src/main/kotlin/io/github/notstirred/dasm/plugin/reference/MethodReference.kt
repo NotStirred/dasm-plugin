@@ -9,22 +9,14 @@ import com.intellij.patterns.PsiJavaPatterns
 import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.*
 import com.intellij.util.ProcessingContext
-import io.github.notstirred.dasm.plugin.DasmConstants.ADD_METHOD_TO_SETS
 import io.github.notstirred.dasm.plugin.DasmConstants.METHOD_REDIRECT
-import io.github.notstirred.dasm.plugin.DasmConstants.TRANSFORM_FROM_METHOD
-import io.github.notstirred.dasm.plugin.DasmConstants.TRANSFORM_METHOD
-import io.github.notstirred.dasm.plugin.dasmSrcType
+import io.github.notstirred.dasm.plugin.dasmSrcTypeHierarchy
+import io.github.notstirred.dasm.plugin.splatMap
 import org.jetbrains.coverage.org.objectweb.asm.Type
 
 object MethodReference : PsiReferenceProvider() {
     val METHOD_REDIRECT_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
         .insideAnnotationAttribute(METHOD_REDIRECT)
-    val ADD_METHOD_TO_SETS_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
-        .insideAnnotationAttribute(ADD_METHOD_TO_SETS, "method")
-    val TRANSFORM_METHOD_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
-        .insideAnnotationAttribute(TRANSFORM_METHOD)
-    val TRANSFORM_FROM_METHOD_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
-        .insideAnnotationAttribute(TRANSFORM_FROM_METHOD)
 
     val METHOD_REFERENCE_REGEX = Regex("(?<name>\\S+)(?<desc>\\(\\S*\\)\\S+)")
 
@@ -36,12 +28,10 @@ object MethodReference : PsiReferenceProvider() {
     }
 
     open class Reference(element: PsiLiteral) : PsiReferenceBase<PsiLiteral>(element, false) {
-        open fun methods(methodName: String): Array<out PsiMethod>? {
-            return if (methodName == "<init>") {
-                element.findContainingClass()?.dasmSrcType?.constructors
-            } else {
-                element.findContainingClass()?.dasmSrcType?.findMethodsByName(methodName, false)
-            }
+        open fun methods(): Array<out PsiMethod>? {
+            return element.findContainingClass()?.dasmSrcTypeHierarchy
+                ?.splatMap { it.constructors + it.methods }
+                ?.toTypedArray()
         }
 
         override fun resolve(): PsiElement? {
@@ -51,7 +41,13 @@ object MethodReference : PsiReferenceProvider() {
             val methodType = Type.getMethodType(match.groups["desc"]!!.value)
             val methodName = match.groups["name"]!!.value
 
-            return methods(methodName)?.firstOrNull { method ->
+            return methods()?.filter {
+                return@filter if (methodName == "<init>") {
+                    it.isConstructor
+                } else {
+                    it.name == methodName
+                }
+            }?.firstOrNull { method ->
                 if (method.parameterList.parametersCount != methodType.argumentTypes.size) {
                     return@firstOrNull false
                 }
@@ -74,21 +70,17 @@ object MethodReference : PsiReferenceProvider() {
         }
 
         override fun getVariants(): Array<out Any?> {
-            val fromType = element.findContainingClass()?.dasmSrcType
-            val methods = ArrayList<PsiMethod>()
-            fromType?.constructors?.let { methods.addAll(it) }
-            fromType?.methods?.let { methods.addAll(it) }
-
-            return methods
-                .map {
-                    JavaLookupElementBuilder.forMethod(it, PsiSubstitutor.EMPTY)
-                        .withBaseLookupString(
-                            StringBuilder()
-                                .append(it.name)
-                                .append(it.descriptor)
-                                .toString()
-                        )
-                }.toTypedArray()
+            val methods = methods() ?: return arrayOf()
+            return methods.map {
+                val name = if (it.isConstructor) "<init>" else it.name
+                JavaLookupElementBuilder.forMethod(it, PsiSubstitutor.EMPTY)
+                    .withBaseLookupString(
+                        StringBuilder()
+                            .append(name)
+                            .append(it.descriptor)
+                            .toString()
+                    )
+            }.toTypedArray()
         }
     }
 }

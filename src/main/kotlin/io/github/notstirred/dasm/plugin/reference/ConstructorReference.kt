@@ -1,16 +1,15 @@
 package io.github.notstirred.dasm.plugin.reference
 
-import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.findContainingClass
 import com.demonwav.mcdev.util.insideAnnotationAttribute
-import com.intellij.codeInsight.completion.JavaLookupElementBuilder
 import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PsiJavaPatterns
 import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.*
 import com.intellij.util.ProcessingContext
 import io.github.notstirred.dasm.plugin.DasmConstants.CONSTRUCTOR_TO_FACTORY_REDIRECT
-import io.github.notstirred.dasm.plugin.dasmSrcType
+import io.github.notstirred.dasm.plugin.dasmSrcTypeHierarchy
+import io.github.notstirred.dasm.plugin.splatMap
 
 object ConstructorReference : PsiReferenceProvider() {
     val PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
@@ -24,27 +23,10 @@ object ConstructorReference : PsiReferenceProvider() {
     }
 
     class Reference(element: PsiLiteral) : MethodReference.Reference(element) {
-        override fun methods(methodName: String): Array<out PsiMethod>? {
-            if (methodName != "<init>")
-                return null
-            return element.findContainingClass()?.dasmSrcType?.constructors
-        }
-
-        override fun getVariants(): Array<out Any?> {
-            val fromType = element.findContainingClass()?.dasmSrcType
-            val methods = ArrayList<PsiMethod>()
-            fromType?.constructors?.let { methods.addAll(it) }
-
-            return methods
-                .map {
-                    JavaLookupElementBuilder.forMethod(it, PsiSubstitutor.EMPTY)
-                        .withBaseLookupString(
-                            StringBuilder()
-                                .append("<init>")
-                                .append(it.descriptor)
-                                .toString()
-                        )
-                }.toTypedArray()
+        override fun methods(): Array<out PsiMethod>? {
+            return element.findContainingClass()?.dasmSrcTypeHierarchy
+                ?.splatMap { it.constructors }
+                ?.toTypedArray()
         }
     }
 }

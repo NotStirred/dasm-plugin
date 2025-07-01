@@ -17,7 +17,6 @@ import io.github.notstirred.dasm.plugin.DasmConstants.METHOD_REDIRECT
 import io.github.notstirred.dasm.plugin.DasmConstants.REF
 import io.github.notstirred.dasm.plugin.DasmConstants.TRANSFORM_FROM_METHOD
 import io.github.notstirred.dasm.plugin.DasmConstants.TRANSFORM_METHOD
-import io.github.notstirred.dasm.plugin.reference.ConstructorReference
 import io.github.notstirred.dasm.plugin.reference.FieldReference
 import io.github.notstirred.dasm.plugin.reference.MethodReference
 import io.github.notstirred.dasm.plugin.reference.RefReference
@@ -31,8 +30,7 @@ class UnresolvedReferenceInspection : AbstractBaseJavaLocalInspectionTool() {
 
         override fun visitNameValuePair(pair: PsiNameValuePair) {
             when (pair.annotationFromNameValuePair?.qualifiedName) {
-                METHOD_REDIRECT, ADD_METHOD_TO_SETS, TRANSFORM_METHOD, TRANSFORM_FROM_METHOD -> MethodReference
-                CONSTRUCTOR_TO_FACTORY_REDIRECT -> ConstructorReference
+                METHOD_REDIRECT, CONSTRUCTOR_TO_FACTORY_REDIRECT, ADD_METHOD_TO_SETS, TRANSFORM_METHOD, TRANSFORM_FROM_METHOD -> MethodReference
                 FIELD_REDIRECT, ADD_FIELD_TO_SETS, FIELD_TO_METHOD_REDIRECT, ADD_FIELD_TO_METHOD_TO_SETS -> FieldReference
                 REF -> RefReference
                 else -> return

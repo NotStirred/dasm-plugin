@@ -9,22 +9,17 @@ import com.intellij.patterns.PsiJavaPatterns
 import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.*
 import com.intellij.util.ProcessingContext
-import io.github.notstirred.dasm.plugin.DasmConstants.ADD_FIELD_TO_METHOD_TO_SETS
-import io.github.notstirred.dasm.plugin.DasmConstants.ADD_FIELD_TO_SETS
 import io.github.notstirred.dasm.plugin.DasmConstants.FIELD_REDIRECT
 import io.github.notstirred.dasm.plugin.DasmConstants.FIELD_TO_METHOD_REDIRECT
-import io.github.notstirred.dasm.plugin.dasmSrcType
+import io.github.notstirred.dasm.plugin.dasmSrcTypeHierarchy
+import io.github.notstirred.dasm.plugin.splatMap
 import org.jetbrains.coverage.org.objectweb.asm.Type
 
 object FieldReference : PsiReferenceProvider() {
     val FIELD_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
         .insideAnnotationAttribute(FIELD_REDIRECT)
-    val ADD_FIELD_TO_SETS_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
-        .insideAnnotationAttribute(ADD_FIELD_TO_SETS, "field")
     val FIELD_TO_METHOD_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
         .insideAnnotationAttribute(FIELD_TO_METHOD_REDIRECT)
-    val ADD_FIELD_TO_METHOD_TO_SETS_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
-        .insideAnnotationAttribute(ADD_FIELD_TO_METHOD_TO_SETS, "field")
 
     val FIELD_REFERENCE_REGEX = Regex("(?<name>\\S+):(?<desc>\\S+)")
 
@@ -35,7 +30,13 @@ object FieldReference : PsiReferenceProvider() {
         return arrayOf(Reference(element as PsiLiteral))
     }
 
-    class Reference(element: PsiLiteral) : PsiReferenceBase<PsiLiteral>(element) {
+    open class Reference(element: PsiLiteral) : PsiReferenceBase<PsiLiteral>(element) {
+        open fun fields(): Array<out PsiField>? {
+            return element.findContainingClass()?.dasmSrcTypeHierarchy
+                ?.splatMap { it.fields }
+                ?.toTypedArray()
+        }
+
         override fun resolve(): PsiElement? {
             val text = element.text.substring(1, element.text.length - 1)
 
@@ -43,18 +44,17 @@ object FieldReference : PsiReferenceProvider() {
             val fieldType = Type.getType(match.groups["desc"]!!.value)
             val fieldName = match.groups["name"]!!.value
 
-            return element.findContainingClass()?.dasmSrcType?.findFieldByName(fieldName, false)?.let { field ->
-                if (field.typeElement!!.type.descriptor != fieldType.descriptor) {
-                    return@let null
+            return fields()?.filter { it.name == fieldName }?.map { field ->
+                if (field.typeElement?.type?.descriptor != fieldType.descriptor) {
+                    return@map null
                 }
-                return@let field
-            }
+                return@map field
+            }?.filterNotNull()?.firstOrNull()
         }
 
         override fun getVariants(): Array<out Any?> {
-            val fromType = element.findContainingClass()?.dasmSrcType
             val fields = ArrayList<PsiField>()
-            fromType?.fields?.let { fields.addAll(it) }
+            fields()?.let { fields.addAll(it) }
 
             return fields
                 .map {
