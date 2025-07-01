@@ -75,7 +75,7 @@ fun parseRef(refAnnotation: PsiAnnotation, project: Project): PsiClass? {
         return it.resolveClass()
     }
     refAnnotation.findDeclaredAttributeValue("string")?.let {
-        return JavaPsiFacade.getInstance(project).findClass(it.text.substring(1, it.textLength), refAnnotation.resolveScope)
+        return JavaPsiFacade.getInstance(project).findClass(it.text.substring(1, it.textLength - 1), refAnnotation.resolveScope)
     }
 
     return null;
