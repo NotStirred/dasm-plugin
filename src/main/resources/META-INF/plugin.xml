@@ -8,6 +8,15 @@
     <depends>com.demonwav.minecraft-dev</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <psi.referenceContributor language="JAVA" implementation="io.github.notstirred.dasm.plugin.reference.DasmReferenceContributor"/>
+        <psi.referenceContributor language="JAVA"
+                                  implementation="io.github.notstirred.dasm.plugin.reference.DasmReferenceContributor"/>
+        <localInspection displayName="Unresolved reference"
+                         shortName="UnresolvedDasmReference"
+                         groupName="Dasm"
+                         language="JAVA"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         hasStaticDescription="true"
+                         implementationClass="io.github.notstirred.dasm.plugin.inspection.UnresolvedReferenceInspection"/>
     </extensions>
 </idea-plugin>
