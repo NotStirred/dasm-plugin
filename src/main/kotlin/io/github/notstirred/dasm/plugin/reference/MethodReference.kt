@@ -9,6 +9,7 @@ import com.intellij.patterns.PsiJavaPatterns
 import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.*
 import com.intellij.util.ProcessingContext
+import io.github.notstirred.dasm.plugin.DasmConstants.ADD_METHOD_TO_SETS
 import io.github.notstirred.dasm.plugin.DasmConstants.METHOD_REDIRECT
 import io.github.notstirred.dasm.plugin.DasmConstants.TRANSFORM_FROM_METHOD
 import io.github.notstirred.dasm.plugin.DasmConstants.TRANSFORM_METHOD
@@ -18,6 +19,8 @@ import org.jetbrains.coverage.org.objectweb.asm.Type
 object MethodReference : PsiReferenceProvider() {
     val METHOD_REDIRECT_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
         .insideAnnotationAttribute(METHOD_REDIRECT)
+    val ADD_METHOD_TO_SETS_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
+        .insideAnnotationAttribute(ADD_METHOD_TO_SETS, "method")
     val TRANSFORM_METHOD_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
         .insideAnnotationAttribute(TRANSFORM_METHOD)
     val TRANSFORM_FROM_METHOD_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())

@@ -9,16 +9,22 @@ import com.intellij.patterns.PsiJavaPatterns
 import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.*
 import com.intellij.util.ProcessingContext
+import io.github.notstirred.dasm.plugin.DasmConstants.ADD_FIELD_TO_METHOD_TO_SETS
+import io.github.notstirred.dasm.plugin.DasmConstants.ADD_FIELD_TO_SETS
 import io.github.notstirred.dasm.plugin.DasmConstants.FIELD_REDIRECT
 import io.github.notstirred.dasm.plugin.DasmConstants.FIELD_TO_METHOD_REDIRECT
 import io.github.notstirred.dasm.plugin.dasmSrcType
 import org.jetbrains.coverage.org.objectweb.asm.Type
 
-object FieldReference: PsiReferenceProvider() {
+object FieldReference : PsiReferenceProvider() {
     val FIELD_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
         .insideAnnotationAttribute(FIELD_REDIRECT)
+    val ADD_FIELD_TO_SETS_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
+        .insideAnnotationAttribute(ADD_FIELD_TO_SETS, "field")
     val FIELD_TO_METHOD_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
         .insideAnnotationAttribute(FIELD_TO_METHOD_REDIRECT)
+    val ADD_FIELD_TO_METHOD_TO_SETS_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
+        .insideAnnotationAttribute(ADD_FIELD_TO_METHOD_TO_SETS, "field")
 
     val FIELD_REFERENCE_REGEX = Regex("(?<name>\\S+):(?<desc>\\S+)")
 
