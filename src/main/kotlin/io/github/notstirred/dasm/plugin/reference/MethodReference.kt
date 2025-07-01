@@ -10,12 +10,18 @@ import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.*
 import com.intellij.util.ProcessingContext
 import io.github.notstirred.dasm.plugin.DasmConstants.METHOD_REDIRECT
+import io.github.notstirred.dasm.plugin.DasmConstants.TRANSFORM_FROM_METHOD
+import io.github.notstirred.dasm.plugin.DasmConstants.TRANSFORM_METHOD
 import io.github.notstirred.dasm.plugin.dasmSrcType
 import org.jetbrains.coverage.org.objectweb.asm.Type
 
-object MethodReference: PsiReferenceProvider() {
-    val PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
+object MethodReference : PsiReferenceProvider() {
+    val METHOD_REDIRECT_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
         .insideAnnotationAttribute(METHOD_REDIRECT)
+    val TRANSFORM_METHOD_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
+        .insideAnnotationAttribute(TRANSFORM_METHOD)
+    val TRANSFORM_FROM_METHOD_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
+        .insideAnnotationAttribute(TRANSFORM_FROM_METHOD)
 
     val METHOD_REFERENCE_REGEX = Regex("(?<name>\\S+)(?<desc>\\(\\S*\\)\\S+)")
 
