@@ -83,14 +83,13 @@ fun parseRef(refAnnotation: PsiAnnotation, project: Project): PsiClass? {
 
 val PsiClass.dasmTarget: PsiClass?
     get() {
-        return cached {
-            val dasmAnnotation = this@dasmTarget.dasmAnnotation ?: return@cached null
+        val dasmAnnotation = this@dasmTarget.dasmAnnotation ?: return null
 
-            // Get @Dasm target
-            val refTarget = dasmAnnotation.findDeclaredAttributeValue("target")?.findAnnotations()?.first { it.qualifiedName.equals(REF) }
+        // Get @Dasm target
+        val refTarget = dasmAnnotation.findDeclaredAttributeValue("target")?.findAnnotations()
+            ?.first { it.qualifiedName.equals(REF) }
 
-            return@cached refTarget?.let { parseRef(it, project) }
-        }
+        return refTarget?.let { parseRef(it, project) }
     }
 
 class Dasm {
