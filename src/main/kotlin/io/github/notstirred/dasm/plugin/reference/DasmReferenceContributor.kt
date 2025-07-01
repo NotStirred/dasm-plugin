@@ -9,5 +9,8 @@ class DasmReferenceContributor : PsiReferenceContributor() {
 
         registrar.registerReferenceProvider(MethodReference.PATTERN, MethodReference)
         registrar.registerReferenceProvider(ConstructorReference.PATTERN, ConstructorReference)
+
+        registrar.registerReferenceProvider(FieldReference.FIELD_PATTERN, FieldReference)
+        registrar.registerReferenceProvider(FieldReference.FIELD_TO_METHOD_PATTERN, FieldReference)
     }
 }
