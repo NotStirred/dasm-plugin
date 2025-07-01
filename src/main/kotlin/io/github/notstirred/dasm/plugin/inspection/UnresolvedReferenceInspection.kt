@@ -37,7 +37,9 @@ class UnresolvedReferenceInspection : AbstractBaseJavaLocalInspectionTool() {
                 REF -> RefReference
                 else -> return
             }
-
+            if (pair.name.equals("setter")) {
+                return // skip setters for now
+            }
             if (pair.value?.references?.all { it.resolve() != null } == true) {
                 return
             }
