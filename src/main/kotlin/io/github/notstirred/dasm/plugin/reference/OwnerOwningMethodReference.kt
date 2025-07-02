@@ -5,6 +5,7 @@ import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PsiJavaPatterns
 import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.*
+import com.intellij.psi.util.parentOfType
 import com.intellij.util.ProcessingContext
 import io.github.notstirred.dasm.plugin.DasmConstants.TRANSFORM_FROM_METHOD
 import io.github.notstirred.dasm.plugin.DasmConstants.TRANSFORM_METHOD
@@ -25,7 +26,7 @@ object OwnerOwningMethodReference : PsiReferenceProvider() {
 
     open class Reference(element: PsiLiteral) : MethodReference.Reference(element) {
         override fun sourceClass(): Iterable<PsiClass> {
-            val refAnnotation = (element.parent?.parent as? PsiAnnotationParameterList)
+            val refAnnotation = element.parentOfType<PsiAnnotationParameterList>(false)
                 ?.attributes?.find { it.name == "owner" }?.value
             if (refAnnotation is PsiAnnotation) {
                 parseClassRef(refAnnotation, element.project)?.let {

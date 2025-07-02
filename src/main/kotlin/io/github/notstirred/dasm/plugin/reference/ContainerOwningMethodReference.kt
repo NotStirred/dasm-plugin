@@ -6,6 +6,7 @@ import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PsiJavaPatterns
 import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.*
+import com.intellij.psi.util.parentOfType
 import com.intellij.util.ProcessingContext
 import io.github.notstirred.dasm.plugin.DasmConstants.ADD_METHOD_TO_SETS
 import io.github.notstirred.dasm.plugin.containerHierarchy
@@ -23,7 +24,8 @@ object ContainerOwningMethodReference : PsiReferenceProvider() {
 
     open class Reference(element: PsiLiteral) : MethodReference.Reference(element) {
         override fun sourceClass(): Iterable<PsiClass> {
-            return (element.parent?.parent as? PsiAnnotationParameterList)?.attributes?.find { it.name == "containers" }?.value
+            return element.parentOfType<PsiAnnotationParameterList>(false)
+                ?.attributes?.find { it.name == "containers" }?.value
                 ?.resolveClass()?.containerHierarchy() ?: emptyList()
         }
     }
