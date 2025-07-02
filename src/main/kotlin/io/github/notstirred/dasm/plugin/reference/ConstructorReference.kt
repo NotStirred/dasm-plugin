@@ -1,6 +1,5 @@
 package io.github.notstirred.dasm.plugin.reference
 
-import com.demonwav.mcdev.util.findContainingClass
 import com.demonwav.mcdev.util.insideAnnotationAttribute
 import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PsiJavaPatterns
@@ -8,7 +7,6 @@ import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.*
 import com.intellij.util.ProcessingContext
 import io.github.notstirred.dasm.plugin.DasmConstants.CONSTRUCTOR_TO_FACTORY_REDIRECT
-import io.github.notstirred.dasm.plugin.dasmSrcTypeHierarchy
 import io.github.notstirred.dasm.plugin.splatMap
 
 object ConstructorReference : PsiReferenceProvider() {
@@ -23,10 +21,10 @@ object ConstructorReference : PsiReferenceProvider() {
     }
 
     class Reference(element: PsiLiteral) : MethodReference.Reference(element) {
-        override fun methods(): Array<out PsiMethod>? {
-            return element.findContainingClass()?.dasmSrcTypeHierarchy
-                ?.splatMap { it.constructors }
-                ?.toTypedArray()
+        override fun methods(): Array<out PsiMethod> {
+            return this.sourceClass()
+                .splatMap { it.constructors }
+                .toTypedArray()
         }
     }
 }

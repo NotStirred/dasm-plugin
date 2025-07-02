@@ -9,7 +9,6 @@ import com.intellij.psi.*
 import com.intellij.util.ProcessingContext
 import io.github.notstirred.dasm.plugin.DasmConstants.ADD_METHOD_TO_SETS
 import io.github.notstirred.dasm.plugin.containerHierarchy
-import io.github.notstirred.dasm.plugin.splatMap
 
 object ContainerOwningMethodReference : PsiReferenceProvider() {
     val ADD_METHOD_TO_SETS_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
@@ -23,10 +22,9 @@ object ContainerOwningMethodReference : PsiReferenceProvider() {
     }
 
     open class Reference(element: PsiLiteral) : MethodReference.Reference(element) {
-        override fun methods(): Array<out PsiMethod>? {
+        override fun sourceClass(): Iterable<PsiClass> {
             return (element.parent?.parent as? PsiAnnotationParameterList)?.attributes?.find { it.name == "containers" }?.value
-                ?.resolveClass()?.containerHierarchy()
-                ?.splatMap { it.methods }?.toTypedArray()
+                ?.resolveClass()?.containerHierarchy() ?: emptyList()
         }
     }
 }

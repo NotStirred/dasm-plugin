@@ -24,17 +24,15 @@ object OwnerOwningMethodReference : PsiReferenceProvider() {
     }
 
     open class Reference(element: PsiLiteral) : MethodReference.Reference(element) {
-        override fun methods(): Array<out PsiMethod>? {
+        override fun sourceClass(): Iterable<PsiClass> {
             val refAnnotation = (element.parent?.parent as? PsiAnnotationParameterList)
                 ?.attributes?.find { it.name == "owner" }?.value
             if (refAnnotation is PsiAnnotation) {
-                val owner = parseClassRef(refAnnotation, element.project)
-                val methods = ArrayList<PsiMethod>()
-                owner?.methods?.let { methods.addAll(it) }
-                owner?.constructors?.let { methods.addAll(it) }
-                return methods.toTypedArray()
+                parseClassRef(refAnnotation, element.project)?.let {
+                    return listOf(it)
+                }
             }
-            return super.methods()
+            return emptyList();
         }
     }
 }

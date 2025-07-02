@@ -28,10 +28,14 @@ object MethodReference : PsiReferenceProvider() {
     }
 
     open class Reference(element: PsiLiteral) : PsiReferenceBase<PsiLiteral>(element, false) {
-        open fun methods(): Array<out PsiMethod>? {
-            return element.findContainingClass()?.dasmSrcTypeHierarchy
-                ?.splatMap { it.constructors + it.methods }
-                ?.toTypedArray()
+        open fun sourceClass(): Iterable<PsiClass> {
+            return element.findContainingClass()?.dasmSrcTypeHierarchy ?: emptyList()
+        }
+
+        open fun methods(): Array<out PsiMethod> {
+            return sourceClass()
+                .splatMap { it.constructors + it.methods }
+                .toTypedArray()
         }
 
         override fun resolve(): PsiElement? {
@@ -41,13 +45,13 @@ object MethodReference : PsiReferenceProvider() {
             val methodType = Type.getMethodType(match.groups["desc"]!!.value)
             val methodName = match.groups["name"]!!.value
 
-            return methods()?.filter {
+            return methods().filter {
                 return@filter if (methodName == "<init>") {
                     it.isConstructor
                 } else {
                     it.name == methodName
                 }
-            }?.firstOrNull { method ->
+            }.firstOrNull { method ->
                 if (method.parameterList.parametersCount != methodType.argumentTypes.size) {
                     return@firstOrNull false
                 }
@@ -70,7 +74,7 @@ object MethodReference : PsiReferenceProvider() {
         }
 
         override fun getVariants(): Array<out Any?> {
-            val methods = methods() ?: return arrayOf()
+            val methods = methods()
             return methods.map {
                 val name = if (it.isConstructor) "<init>" else it.name
                 JavaLookupElementBuilder.forMethod(it, PsiSubstitutor.EMPTY)
