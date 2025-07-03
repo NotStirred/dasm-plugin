@@ -78,12 +78,13 @@ object MethodReference : PsiReferenceProvider() {
             return methods.map {
                 val name = if (it.isConstructor) "<init>" else it.name
                 JavaLookupElementBuilder.forMethod(it, PsiSubstitutor.EMPTY)
+                    .withPresentableText(name)
                     .withBaseLookupString(
                         StringBuilder()
                             .append(name)
                             .append(it.descriptor)
                             .toString()
-                    )
+                    ).withLookupString(name + it.descriptor)
             }.toTypedArray()
         }
     }
