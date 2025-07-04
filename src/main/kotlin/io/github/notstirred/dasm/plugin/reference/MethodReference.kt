@@ -4,6 +4,7 @@ import com.demonwav.mcdev.util.descriptor
 import com.demonwav.mcdev.util.findContainingClass
 import com.demonwav.mcdev.util.insideAnnotationAttribute
 import com.intellij.codeInsight.completion.JavaLookupElementBuilder
+import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PsiJavaPatterns
 import com.intellij.patterns.StandardPatterns
@@ -32,9 +33,9 @@ object MethodReference : PsiReferenceProvider() {
             return element.findContainingClass()?.dasmSrcTypeHierarchy ?: emptyList()
         }
 
-        open fun methods(): Array<out PsiMethod> {
+        open fun members(): Array<out PsiMember> {
             return sourceClass()
-                .splatMap { it.constructors + it.methods }
+                .splatMap { arrayOf(*it.constructors, *it.methods, *it.initializers) }
                 .toTypedArray()
         }
 
@@ -45,46 +46,66 @@ object MethodReference : PsiReferenceProvider() {
             val methodType = Type.getMethodType(match.groups["desc"]!!.value)
             val methodName = match.groups["name"]!!.value
 
-            return methods().filter {
-                return@filter if (methodName == "<init>") {
-                    it.isConstructor
-                } else {
-                    it.name == methodName
+            return members().filter {
+                when (it) {
+                    is PsiClassInitializer -> methodName == "<clinit>"
+                    is PsiMethod -> when (methodName) {
+                        "<init>" -> it.isConstructor
+                        else -> it.name == methodName
+                    }
+
+                    else -> throw IllegalArgumentException()
                 }
             }.firstOrNull { method ->
-                if (method.parameterList.parametersCount != methodType.argumentTypes.size) {
-                    return@firstOrNull false
-                }
-                if (!method.parameterList.parameters.zip(methodType.argumentTypes)
-                        .all { (psiParam, paramToMatch) -> psiParam.typeElement!!.type.descriptor == paramToMatch.descriptor }
-                ) {
-                    return@firstOrNull false
-                }
+                when (method) {
+                    is PsiClassInitializer -> true
+                    is PsiMethod -> {
+                        if (method.parameterList.parametersCount != methodType.argumentTypes.size) {
+                            return@firstOrNull false
+                        }
+                        if (!method.parameterList.parameters.zip(methodType.argumentTypes)
+                                .all { (psiParam, paramToMatch) -> psiParam.typeElement!!.type.descriptor == paramToMatch.descriptor }
+                        ) {
+                            return@firstOrNull false
+                        }
 
-                if (method.isConstructor) {
-                    if (methodType.returnType.descriptor != "V") {
-                        return@firstOrNull false
+                        if (method.isConstructor) {
+                            if (methodType.returnType.descriptor != "V") {
+                                return@firstOrNull false
+                            }
+                        } else if (method.returnTypeElement!!.type.descriptor != methodType.returnType.descriptor) {
+                            return@firstOrNull false
+                        }
+
+                        true
                     }
-                } else if (method.returnTypeElement!!.type.descriptor != methodType.returnType.descriptor) {
-                    return@firstOrNull false
-                }
 
-                return@firstOrNull true
+                    else -> throw IllegalArgumentException()
+                }
             }
         }
 
         override fun getVariants(): Array<out Any?> {
-            val methods = methods()
-            return methods.map {
-                val name = if (it.isConstructor) "<init>" else it.name
-                JavaLookupElementBuilder.forMethod(it, PsiSubstitutor.EMPTY)
-                    .withPresentableText(name)
-                    .withBaseLookupString(
-                        StringBuilder()
-                            .append(name)
-                            .append(it.descriptor)
-                            .toString()
-                    ).withLookupString(name + it.descriptor)
+            return members().map {
+                when (it) {
+                    is PsiClassInitializer -> {
+                        LookupElementBuilder.create("<clinit>")
+                            .withIcon(com.intellij.util.PlatformIcons.METHOD_ICON)
+                            .withBaseLookupString("<clinit>()")
+                    }
+
+                    is PsiMethod -> {
+                        val name = if (it.isConstructor) "<init>" else it.name
+                        JavaLookupElementBuilder.forMethod(it, PsiSubstitutor.EMPTY)
+                            .withPresentableText(name)
+                            .withBaseLookupString(
+                                StringBuilder()
+                                    .append(name)
+                                    .append(it.descriptor)
+                                    .toString()
+                            ).withLookupString(name + it.descriptor)
+                    }
+                }
             }.toTypedArray()
         }
     }

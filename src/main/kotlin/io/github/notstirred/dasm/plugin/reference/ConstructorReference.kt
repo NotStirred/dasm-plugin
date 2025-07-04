@@ -21,7 +21,7 @@ object ConstructorReference : PsiReferenceProvider() {
     }
 
     class Reference(element: PsiLiteral) : MethodReference.Reference(element) {
-        override fun methods(): Array<out PsiMethod> {
+        override fun members(): Array<out PsiMember> {
             return this.sourceClass()
                 .splatMap { it.constructors }
                 .toTypedArray()
