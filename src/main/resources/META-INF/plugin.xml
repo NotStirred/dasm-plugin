@@ -1,7 +1,8 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
-<idea-plugin>
+<idea-plugin require-restart="false">
     <id>io.github.notstirred.dasm.plugin</id>
     <name>DASM Dev</name>
+    <description>Auto-completion and inspections for DASM</description>
     <vendor>NotStirred</vendor>
 
     <depends>com.intellij.modules.platform</depends>
