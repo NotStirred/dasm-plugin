@@ -33,7 +33,8 @@ object OwnerOwningMethodReference : PsiReferenceProvider() {
                     return listOf(it)
                 }
             }
-            return emptyList();
+            // no owner attribute, fallback to default (inherit from dasm class)
+            return super.sourceClass()
         }
     }
 }
