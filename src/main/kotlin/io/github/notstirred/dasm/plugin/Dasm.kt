@@ -1,6 +1,5 @@
 package io.github.notstirred.dasm.plugin
 
-import com.demonwav.mcdev.platform.mixin.MixinModule
 import com.demonwav.mcdev.util.findAnnotations
 import com.demonwav.mcdev.util.resolveClass
 import com.demonwav.mcdev.util.resolveType
@@ -9,17 +8,11 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiType
-import com.intellij.psi.search.GlobalSearchScope
-import io.github.notstirred.dasm.annotation.parse.DasmImpl
-import io.github.notstirred.dasm.api.annotations.Dasm
 import io.github.notstirred.dasm.plugin.DasmConstants.DASM
 import io.github.notstirred.dasm.plugin.DasmConstants.INTER_OWNER_CONTAINER
 import io.github.notstirred.dasm.plugin.DasmConstants.INTRA_OWNER_CONTAINER
 import io.github.notstirred.dasm.plugin.DasmConstants.REF
 import io.github.notstirred.dasm.plugin.DasmConstants.TYPE_REDIRECT
-import io.github.notstirred.dasm.plugin.config.DasmConfigFileType
-import io.github.notstirred.dasm.util.TypeUtil
-import org.objectweb.asm.tree.AnnotationNode
 
 val PsiClass.dasmAnnotation
     get() = modifierList?.findAnnotation(DASM)
@@ -126,32 +119,4 @@ val PsiClass.dasmTarget: PsiClass?
 
 inline fun <T, R> Iterable<T>.splatMap(transform: (T) -> Array<R>): List<R> {
     return this.map(transform).flatMap { it.toList() }
-}
-
-
-class Dasm {
-    companion object {
-        private val dasmFileTypes = listOf(DasmConfigFileType.Json, DasmConfigFileType.Json5)
-
-        fun getAllDasmClasses(project: Project, scope: GlobalSearchScope): Collection<PsiClass> {
-            // TODO: replace this with parsing dasm.json once it exists
-            val dasmTargetMap = HashMap<PsiClass, MutableList<PsiClass>>();
-
-            val mixinClasses = MixinModule.getAllMixinClasses(project, scope)
-
-            mixinClasses.forEach { mixinClass ->
-                mixinClass.getAnnotation(Dasm::class.qualifiedName!!)?.let {
-                    val ann = mixinClass.getAnnotation(Dasm::class.qualifiedName!!)!!.qualifiedName
-                    val annotationNode = AnnotationNode(TypeUtil.typeNameToDescriptor(ann))
-                    val target = DasmImpl.parse(annotationNode).target()
-                    JavaPsiFacade.getInstance(project).findClasses(target.get().className, scope).toList()
-                        .forEach { dasmTarget ->
-                            dasmTargetMap.computeIfAbsent(dasmTarget) { ArrayList() }.add(mixinClass)
-                        }
-                }
-            }
-
-            return null!!
-        }
-    }
 }
