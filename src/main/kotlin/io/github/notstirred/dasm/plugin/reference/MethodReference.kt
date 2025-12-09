@@ -60,24 +60,28 @@ object MethodReference : PsiReferenceProvider() {
                 when (method) {
                     is PsiClassInitializer -> true
                     is PsiMethod -> {
-                        if (method.parameterList.parametersCount != methodType.argumentTypes.size) {
-                            return@firstOrNull false
-                        }
-                        if (!method.parameterList.parameters.zip(methodType.argumentTypes)
-                                .all { (psiParam, paramToMatch) -> psiParam.typeElement!!.type.descriptor == paramToMatch.descriptor }
-                        ) {
-                            return@firstOrNull false
-                        }
-
-                        if (method.isConstructor) {
-                            if (methodType.returnType.descriptor != "V") {
+                        try {
+                            if (method.parameterList.parametersCount != methodType.argumentTypes.size) {
                                 return@firstOrNull false
                             }
-                        } else if (method.returnTypeElement!!.type.descriptor != methodType.returnType.descriptor) {
+                            if (!method.parameterList.parameters.zip(methodType.argumentTypes)
+                                    .all { (psiParam, paramToMatch) -> psiParam.typeElement!!.type.descriptor == paramToMatch.descriptor }
+                            ) {
+                                return@firstOrNull false
+                            }
+
+                            if (method.isConstructor) {
+                                if (methodType.returnType.descriptor != "V") {
+                                    return@firstOrNull false
+                                }
+                            } else if (method.returnTypeElement!!.type.descriptor != methodType.returnType.descriptor) {
+                                return@firstOrNull false
+                            }
+
+                            return@firstOrNull true
+                        } catch (_: IllegalArgumentException) {
                             return@firstOrNull false
                         }
-
-                        true
                     }
 
                     else -> throw IllegalArgumentException()
