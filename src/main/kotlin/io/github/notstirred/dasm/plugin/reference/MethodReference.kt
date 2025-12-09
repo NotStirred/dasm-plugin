@@ -9,6 +9,8 @@ import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PsiJavaPatterns
 import com.intellij.patterns.StandardPatterns
 import com.intellij.psi.*
+import com.intellij.psi.impl.compiled.ClsClassImpl
+import com.intellij.psi.impl.source.PsiClassImpl
 import com.intellij.util.ProcessingContext
 import io.github.notstirred.dasm.plugin.DasmConstants.METHOD_REDIRECT
 import io.github.notstirred.dasm.plugin.dasmSrcTypeHierarchy
@@ -41,6 +43,13 @@ object MethodReference : PsiReferenceProvider() {
 
         override fun resolve(): PsiElement? {
             val text = element.text.substring(1, element.text.length - 1)
+
+            if (text == "<clinit>") {
+                try {
+                    return ((sourceClass().first() as ClsClassImpl).mirror as PsiClassImpl).initializers.getOrNull(0) // FIXME: SURELY there is a better way to get initializers than this
+                } catch (_: Exception) {
+                }
+            }
 
             val match = METHOD_REFERENCE_REGEX.find(text) ?: return null
             val methodType = Type.getMethodType(match.groups["desc"]!!.value)
