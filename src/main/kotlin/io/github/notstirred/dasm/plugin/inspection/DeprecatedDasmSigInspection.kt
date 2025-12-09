@@ -35,6 +35,9 @@ class DeprecatedDasmSigInspection : AbstractBaseJavaLocalInspectionTool() {
                                 descriptor: ProblemDescriptor
                             ) {
                                 val pair = descriptor.psiElement as PsiNameValuePair
+                                if (pair.value !is PsiAnnotation) {
+                                    return
+                                }
 
                                 val attributes = (pair.value as PsiAnnotation).parameterList.attributes
                                 val name = attributes.find { it -> it.name == "name" }?.let {
@@ -72,6 +75,10 @@ class DeprecatedDasmSigInspection : AbstractBaseJavaLocalInspectionTool() {
                                 descriptor: ProblemDescriptor
                             ) {
                                 val pair = descriptor.psiElement as PsiNameValuePair
+                                if (pair.value!!.lastChild.children.size < 2) {
+                                    return
+                                }
+
                                 val stringPart = pair.value!!.lastChild.children.get(1).firstChild.copy()
 
                                 pair.value?.replace(stringPart)
@@ -97,6 +104,9 @@ class DeprecatedDasmSigInspection : AbstractBaseJavaLocalInspectionTool() {
                                 descriptor: ProblemDescriptor
                             ) {
                                 val pair = descriptor.psiElement as PsiNameValuePair
+                                if (pair.value !is PsiAnnotation) {
+                                    return
+                                }
 
                                 val attributes = (pair.value as PsiAnnotation).parameterList.attributes
                                 val args = attributes.find { it -> it.name == "args" }?.let {
