@@ -102,14 +102,14 @@ object MethodReference : PsiReferenceProvider() {
             return members().map {
                 when (it) {
                     is PsiClassInitializer -> {
-                        LookupElementBuilder.create("<clinit>")
+                        return@map LookupElementBuilder.create("<clinit>")
                             .withIcon(com.intellij.util.PlatformIcons.METHOD_ICON)
                             .withBaseLookupString("<clinit>()")
                     }
 
                     is PsiMethod -> {
                         val name = if (it.isConstructor) "<init>" else it.name
-                        JavaLookupElementBuilder.forMethod(it, PsiSubstitutor.EMPTY)
+                        return@map JavaLookupElementBuilder.forMethod(it, PsiSubstitutor.EMPTY)
                             .withPresentableText(name)
                             .withBaseLookupString(
                                 StringBuilder()
