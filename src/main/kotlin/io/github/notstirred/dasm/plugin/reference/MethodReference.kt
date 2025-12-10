@@ -104,7 +104,7 @@ object MethodReference : PsiReferenceProvider() {
                     is PsiClassInitializer -> {
                         return@map LookupElementBuilder.create("<clinit>")
                             .withIcon(com.intellij.util.PlatformIcons.METHOD_ICON)
-                            .withBaseLookupString("<clinit>()")
+                            .withBaseLookupString("<clinit>")
                     }
 
                     is PsiMethod -> {
