@@ -21,7 +21,7 @@ object FieldReference : PsiReferenceProvider() {
     val FIELD_TO_METHOD_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
         .insideAnnotationAttribute(FIELD_TO_METHOD_REDIRECT)
 
-    val FIELD_REFERENCE_REGEX = Regex("(?<name>\\S+):(?<desc>\\S+)")
+    val FIELD_REFERENCE_REGEX = Regex("^(?<name>\\S+):(?<desc>\\S+)$")
 
     override fun getReferencesByElement(
         element: PsiElement,

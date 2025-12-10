@@ -21,7 +21,7 @@ object MethodReference : PsiReferenceProvider() {
     val METHOD_REDIRECT_PATTERN: ElementPattern<PsiLiteral> = PsiJavaPatterns.psiLiteral(StandardPatterns.string())
         .insideAnnotationAttribute(METHOD_REDIRECT)
 
-    val METHOD_REFERENCE_REGEX = Regex("(?<name>\\S+)(?<desc>\\(\\S*\\)\\S+)")
+    val METHOD_REFERENCE_REGEX = Regex("^(?<name>\\S+)(?<desc>\\(\\S*\\)\\S+)$")
     val CLINIT_REFERENCE_REGEX = Regex("^(?<name><clinit>)$")
 
     override fun getReferencesByElement(
