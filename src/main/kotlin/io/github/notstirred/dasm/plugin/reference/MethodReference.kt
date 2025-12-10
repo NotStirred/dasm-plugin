@@ -22,6 +22,7 @@ object MethodReference : PsiReferenceProvider() {
         .insideAnnotationAttribute(METHOD_REDIRECT)
 
     val METHOD_REFERENCE_REGEX = Regex("(?<name>\\S+)(?<desc>\\(\\S*\\)\\S+)")
+    val CLINIT_REFERENCE_REGEX = Regex("^(?<name><clinit>)$")
 
     override fun getReferencesByElement(
         element: PsiElement,
@@ -37,22 +38,14 @@ object MethodReference : PsiReferenceProvider() {
 
         open fun members(): Array<out PsiMember> {
             return sourceClass()
-                .splatMap { arrayOf(*it.constructors, *it.methods, *it.initializers) }
+                .splatMap { arrayOf(*it.constructors, *it.methods, *it.initializers, *hiddenInitializers(it)) }
                 .toTypedArray()
         }
 
         override fun resolve(): PsiElement? {
             val text = element.text.substring(1, element.text.length - 1)
 
-            if (text == "<clinit>") {
-                try {
-                    return ((sourceClass().first() as ClsClassImpl).mirror as PsiClassImpl).initializers.getOrNull(0) // FIXME: SURELY there is a better way to get initializers than this
-                } catch (_: Exception) {
-                }
-            }
-
-            val match = METHOD_REFERENCE_REGEX.find(text) ?: return null
-            val methodType = Type.getMethodType(match.groups["desc"]!!.value)
+            val match = METHOD_REFERENCE_REGEX.find(text) ?: CLINIT_REFERENCE_REGEX.find(text) ?: return null
             val methodName = match.groups["name"]!!.value
 
             return members().filter {
@@ -70,6 +63,8 @@ object MethodReference : PsiReferenceProvider() {
                     is PsiClassInitializer -> true
                     is PsiMethod -> {
                         try {
+                            val methodType = Type.getMethodType(match.groups["desc"]!!.value)
+
                             if (method.parameterList.parametersCount != methodType.argumentTypes.size) {
                                 return@firstOrNull false
                             }
@@ -120,6 +115,14 @@ object MethodReference : PsiReferenceProvider() {
                     }
                 }
             }.toTypedArray()
+        }
+
+        private fun hiddenInitializers(sourceClass: PsiClass): Array<PsiClassInitializer> {
+            try {
+                return ((sourceClass as ClsClassImpl).mirror as PsiClassImpl).initializers // FIXME: SURELY there is a better way to get initializers than this
+            } catch (_: Exception) {
+            }
+            return arrayOf()
         }
     }
 }
